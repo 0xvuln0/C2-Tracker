@@ -14,6 +14,13 @@ from c2tracker import __version__
 from c2tracker.analyzer import ThreatResult, analyze_threat
 from c2tracker.censys_lookup import lookup_ip as censys_lookup
 from c2tracker.config import Config
+from c2tracker.malware_db import (
+    get_all_actors,
+    get_all_families,
+    get_all_ips,
+    search_actor,
+    search_family,
+)
 from c2tracker.network import Connection, get_connections, get_unique_remote_ips, is_private_ip
 from c2tracker.shodan_lookup import lookup_ip as shodan_lookup
 
@@ -78,7 +85,20 @@ def print_threat_result(result: ThreatResult) -> None:
         lines.append("")
         lines.append("[bold]Indicators:[/bold]")
         for ind in result.indicators:
-            lines.append(f"  • {ind}")
+            lines.append(f"  \u2022 {ind}")
+
+    if result.malware_db_matches:
+        lines.append("")
+        lines.append("[bold red]Malware Database Matches:[/bold red]")
+        seen = set()
+        for m in result.malware_db_matches:
+            key = (m.ip, m.malware_family)
+            if key in seen:
+                continue
+            seen.add(key)
+            actor_str = f" (Actor: {m.threat_actor})" if m.threat_actor != "Various" else ""
+            port_str = f" Port: {m.port}" if m.port else ""
+            lines.append(f"  \u2022 [red]{m.malware_family}[/red]{actor_str} - {m.description}{port_str}")
 
     if result.shodan_result and not result.shodan_result.error:
         lines.append("")
@@ -212,6 +232,95 @@ def analyze_single_ip(
     return analyze_threat(ip, s_result, c_result, connections)
 
 
+def cmd_check_ip(args: argparse.Namespace) -> None:
+    print_banner()
+    from c2tracker.malware_db import check_ip as db_check
+
+    for ip in args.ips:
+        matches = db_check(ip)
+        if matches:
+            console.print(f"\n[bold red]KNOWN MALICIOUS: {ip}[/bold red]")
+            table = Table(title=f"Matches for {ip}", show_lines=True)
+            table.add_column("Malware Family", style="red")
+            table.add_column("Threat Actor", style="yellow")
+            table.add_column("Description")
+            table.add_column("Port", style="cyan")
+            table.add_column("First Seen", style="dim")
+            for m in matches:
+                table.add_row(
+                    m.malware_family,
+                    m.threat_actor,
+                    m.description,
+                    str(m.port) if m.port else "-",
+                    m.first_seen or "-",
+                )
+            console.print(table)
+        else:
+            console.print(f"[green]{ip} - not found in threat database[/green]")
+
+
+def cmd_search_family(args: argparse.Namespace) -> None:
+    print_banner()
+    results = search_family(args.family)
+    if not results:
+        console.print(f"[yellow]No results for family: {args.family}[/yellow]")
+        return
+
+    console.print(f"\n[bold]Found {len(results)} record(s) for family: {args.family}[/bold]\n")
+    table = Table(show_lines=True)
+    table.add_column("IP", style="red")
+    table.add_column("Malware Family", style="yellow")
+    table.add_column("Threat Actor")
+    table.add_column("Description")
+    table.add_column("Port", style="cyan")
+    for m in results:
+        table.add_row(m.ip, m.malware_family, m.threat_actor, m.description, str(m.port) if m.port else "-")
+    console.print(table)
+
+
+def cmd_search_actor(args: argparse.Namespace) -> None:
+    print_banner()
+    results = search_actor(args.actor)
+    if not results:
+        console.print(f"[yellow]No results for actor: {args.actor}[/yellow]")
+        return
+
+    console.print(f"\n[bold]Found {len(results)} record(s) for actor: {args.actor}[/bold]\n")
+    table = Table(show_lines=True)
+    table.add_column("IP", style="red")
+    table.add_column("Malware Family", style="yellow")
+    table.add_column("Threat Actor")
+    table.add_column("Description")
+    table.add_column("Port", style="cyan")
+    for m in results:
+        table.add_row(m.ip, m.malware_family, m.threat_actor, m.description, str(m.port) if m.port else "-")
+    console.print(table)
+
+
+def cmd_list_db(args: argparse.Namespace) -> None:
+    print_banner()
+    families = get_all_families()
+    actors = get_all_actors()
+    all_ips = get_all_ips()
+
+    console.print(f"\n[bold]Threat Database Summary[/bold]")
+    console.print(f"  Total unique IPs: [cyan]{len(all_ips)}[/cyan]")
+    console.print(f"  Malware families: [cyan]{len(families)}[/cyan]")
+    console.print(f"  Threat actors: [cyan]{len(actors)}[/cyan]")
+
+    if args.families:
+        console.print("\n[bold]Malware Families:[/bold]")
+        for f in families:
+            count = len(search_family(f))
+            console.print(f"  \u2022 {f} ({count} IPs)")
+
+    if args.actors:
+        console.print("\n[bold]Threat Actors:[/bold]")
+        for a in actors:
+            count = len(search_actor(a))
+            console.print(f"  \u2022 {a} ({count} IPs)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="c2tracker",
@@ -220,7 +329,9 @@ def main() -> None:
     parser.add_argument("--version", action="version", version=f"c2tracker {__version__}")
     parser.add_argument("--env-file", default=".env", help="Path to .env file with API keys")
 
-    scan_parser = parser.add_argument_group("scanning")
+    subparsers = parser.add_subparsers(dest="command")
+
+    scan_parser = subparsers.add_parser("scan", help="Scan active network connections")
     scan_parser.add_argument("-m", "--monitor", action="store_true", help="Continuous monitoring mode")
     scan_parser.add_argument("-i", "--interval", type=int, default=30, help="Monitoring interval in seconds (default: 30)")
     scan_parser.add_argument("-f", "--filter-private", action="store_true", help="Exclude private/internal IPs")
@@ -228,15 +339,48 @@ def main() -> None:
     scan_parser.add_argument("-a", "--show-all", action="store_true", help="Show results for all IPs (including LOW threat)")
     scan_parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     scan_parser.add_argument("--no-api", action="store_true", help="Skip API lookups (local analysis only)")
+    scan_parser.add_argument("--shodan-only", action="store_true", help="Only use Shodan for lookups")
+    scan_parser.add_argument("--censys-only", action="store_true", help="Only use Censys for lookups")
 
-    api_parser = parser.add_argument_group("API selection")
-    api_parser.add_argument("--shodan-only", action="store_true", help="Only use Shodan for lookups")
-    api_parser.add_argument("--censys-only", action="store_true", help="Only use Censys for lookups")
+    check_parser = subparsers.add_parser("check", help="Check IPs against the threat database")
+    check_parser.add_argument("ips", nargs="+", help="IP addresses to check")
+
+    family_parser = subparsers.add_parser("family", help="Search threat database by malware family")
+    family_parser.add_argument("family", help="Malware family name to search")
+
+    actor_parser = subparsers.add_parser("actor", help="Search threat database by threat actor")
+    actor_parser.add_argument("actor", help="Threat actor name to search")
+
+    db_parser = subparsers.add_parser("db", help="Show threat database summary")
+    db_parser.add_argument("--families", action="store_true", help="List all malware families")
+    db_parser.add_argument("--actors", action="store_true", help="List all threat actors")
+
+    legacy_parser = argparse.ArgumentParser(add_help=False)
+    legacy_parser.add_argument("-m", "--monitor", action="store_true")
+    legacy_parser.add_argument("-i", "--interval", type=int, default=30)
+    legacy_parser.add_argument("-f", "--filter-private", action="store_true")
+    legacy_parser.add_argument("-s", "--show-connections", action="store_true")
+    legacy_parser.add_argument("-a", "--show-all", action="store_true")
+    legacy_parser.add_argument("-v", "--verbose", action="store_true")
+    legacy_parser.add_argument("--no-api", action="store_true")
+    legacy_parser.add_argument("--shodan-only", action="store_true")
+    legacy_parser.add_argument("--censys-only", action="store_true")
 
     args = parser.parse_args()
 
-    print_banner()
-    run_scan(args)
+    if args.command == "scan":
+        print_banner()
+        run_scan(args)
+    elif args.command == "check":
+        cmd_check_ip(args)
+    elif args.command == "family":
+        cmd_search_family(args)
+    elif args.command == "actor":
+        cmd_search_actor(args)
+    elif args.command == "db":
+        cmd_list_db(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

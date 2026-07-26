@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from c2tracker.censys_lookup import CensysResult
+from c2tracker.malware_db import MalwareIP, check_ip, search_actor, search_family
 from c2tracker.network import Connection
 from c2tracker.shodan_lookup import ShodanResult
 
@@ -72,6 +73,7 @@ class ThreatResult:
     detected_frameworks: list[str] = field(default_factory=list)
     indicators: list[str] = field(default_factory=list)
     associated_ports: list[int] = field(default_factory=list)
+    malware_db_matches: list[MalwareIP] = field(default_factory=list)
     shodan_result: ShodanResult | None = None
     censys_result: CensysResult | None = None
     connections: list[Connection] = field(default_factory=list)
@@ -82,6 +84,8 @@ class ThreatResult:
         score += len(self.detected_frameworks) * 30
         score += len(self.indicators) * 10
         score += len(self.associated_ports) * 5
+        if self.malware_db_matches:
+            score += min(len(self.malware_db_matches) * 20, 40)
         if self.shodan_result and self.shodan_result.vulns:
             score += len(self.shodan_result.vulns) * 3
         if self.shodan_result and self.shodan_result.is_c2_suspect:
@@ -152,6 +156,23 @@ def analyze_threat(
         censys_result=censys_result,
         connections=connections or [],
     )
+
+    db_matches = check_ip(ip)
+    if db_matches:
+        result.malware_db_matches = db_matches
+        families = list({m.malware_family for m in db_matches})
+        actors = list({m.threat_actor for m in db_matches if m.threat_actor != "Various"})
+        result.indicators.append(
+            f"KNOWN MALICIOUS: Matched {len(db_matches)} record(s) in threat database"
+        )
+        result.indicators.append(
+            f"Malware families: {', '.join(families)}"
+        )
+        if actors:
+            result.indicators.append(f"Threat actors: {', '.join(actors)}")
+        for m in db_matches:
+            if m.malware_family not in result.detected_frameworks:
+                result.detected_frameworks.append(m.malware_family)
 
     if shodan_result and not shodan_result.error:
         shodan_indicators = analyze_shodan_banners(shodan_result)
