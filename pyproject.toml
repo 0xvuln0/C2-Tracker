@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "c2tracker"
+version = "0.1.0"
+description = "C2 server tracker - monitors network connections and identifies Command & Control infrastructure via Shodan and Censys"
+requires-python = ">=3.9"
+dependencies = [
+    "psutil>=5.9.0",
+    "shodan>=1.28.0",
+    "censys>=2.2.0",
+    "rich>=13.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+c2tracker = "c2tracker.cli:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
