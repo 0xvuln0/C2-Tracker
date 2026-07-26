@@ -59,44 +59,61 @@ Get free API keys:
 
 All scan commands require `sudo` because they read live network connections.
 
+There are two ways to run the tool:
+
+**Option A — Run directly with Python (no install needed):**
+
+```bash
+sudo python3 c2tracker/cli.py scan
+```
+
+**Option B — Install it first, then use the `c2tracker` command:**
+
+```bash
+pip install .
+sudo c2tracker scan
+```
+
+### Scan network connections
+
 ```bash
 # Basic scan
-sudo c2tracker scan
+sudo python3 c2tracker/cli.py scan
 
 # Show all connections with verbose output
-sudo c2tracker scan -s -v
+sudo python3 c2tracker/cli.py scan -s -v
 
 # Continuous monitoring (check every 10 seconds)
-sudo c2tracker scan -m -i 10
+sudo python3 c2tracker/cli.py scan -m -i 10
 
 # Filter out private/internal IPs
-sudo c2tracker scan -f
+sudo python3 c2tracker/cli.py scan -f
 
 # Local-only scan (no Shodan/Censys lookups, just malware DB + network)
-sudo c2tracker scan --no-api
+sudo python3 c2tracker/cli.py scan --no-api
 ```
 
 ### Check IPs against the threat database
 
 ```bash
 # Check one or more IPs
-c2tracker check 45.77.65.114
-c2tracker check 45.77.65.114 185.56.83.83 192.168.1.1
+python3 c2tracker/cli.py check 45.77.65.114
+python3 c2tracker/cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
 ```
 
 ### Search the threat database
 
 ```bash
 # Search by malware family
-c2tracker family "cobalt strike"
-c2tracker family trickbot
+python3 c2tracker/cli.py family "cobalt strike"
+python3 c2tracker/cli.py family trickbot
 
 # Search by threat actor
-c2tracker actor "Evil Corp"
-c2tracker actor "Conti Group"
+python3 c2tracker/cli.py actor "Evil Corp"
+python3 c2tracker/cli.py actor "Conti Group"
 
 # Show database summary
-c2tracker db --families --actors
+python3 c2tracker/cli.py db --families --actors
 ```
 
 ## C2 Frameworks Detected
