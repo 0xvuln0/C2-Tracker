@@ -57,7 +57,6 @@ pip install c2tracker
 ```bash
 git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
-pip install -e ".[all]"
 ```
 
 ### 2. Set up API keys (optional)
