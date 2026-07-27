@@ -1,6 +1,6 @@
 """Tests for CLI utilities and Config."""
 
-from c2tracker.config import Config
+from config import Config
 
 
 class TestConfig:
@@ -26,17 +26,17 @@ class TestConfig:
 
 class TestValidateIp:
     def test_valid_ip(self):
-        from c2tracker.cli import _validate_ip
+        from cli import _validate_ip
         assert _validate_ip("8.8.8.8") == "8.8.8.8"
 
     def test_invalid_ip(self):
-        from c2tracker.cli import _validate_ip
+        from cli import _validate_ip
         assert _validate_ip("not-an-ip") is None
 
     def test_ipv6_rejected(self):
-        from c2tracker.cli import _validate_ip
+        from cli import _validate_ip
         assert _validate_ip("::1") is None
 
     def test_empty_string(self):
-        from c2tracker.cli import _validate_ip
+        from cli import _validate_ip
         assert _validate_ip("") is None

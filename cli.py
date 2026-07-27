@@ -13,8 +13,8 @@ import os
 import sys
 import time
 
-# Allow running as `python3 c2tracker/cli.py` from the project root
-_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Allow running as `python3 cli.py` from the project root
+_project_root = os.path.dirname(os.path.abspath(__file__))
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
@@ -23,7 +23,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from c2tracker import __version__
+from __init__ import __version__
 
 console = Console()
 
@@ -149,9 +149,9 @@ def _validate_ip(ip_str: str) -> str | None:
 
 def run_scan(args: argparse.Namespace) -> None:
     """Execute a network scan and analyze all external IPs."""
-    from c2tracker.analyzer import analyze_threat
-    from c2tracker.config import Config
-    from c2tracker.network import get_connections, is_private_ip
+    from analyzer import analyze_threat
+    from config import Config
+    from network import get_connections, is_private_ip
 
     config = Config.from_env(args.env_file)
 
@@ -249,8 +249,8 @@ def _analyze_single_ip(config, ip, connections, args, analyze_threat):
     c_result = None
 
     if not args.no_api:
-        from c2tracker.censys_lookup import lookup_ip as censys_lookup
-        from c2tracker.shodan_lookup import lookup_ip as shodan_lookup
+        from censys_lookup import lookup_ip as censys_lookup
+        from shodan_lookup import lookup_ip as shodan_lookup
 
         if args.verbose:
             console.print(f"  [dim]Looking up {ip} via Shodan...[/dim]")
@@ -266,7 +266,7 @@ def _analyze_single_ip(config, ip, connections, args, analyze_threat):
 def cmd_check_ip(args: argparse.Namespace) -> None:
     """Check one or more IPs against the local threat database."""
     print_banner()
-    from c2tracker.malware_db import check_ip as db_check
+    from malware_db import check_ip as db_check
 
     for raw_ip in args.ips:
         ip = _validate_ip(raw_ip)
@@ -299,7 +299,7 @@ def cmd_check_ip(args: argparse.Namespace) -> None:
 def cmd_search_family(args: argparse.Namespace) -> None:
     """Search the threat database by malware family name."""
     print_banner()
-    from c2tracker.malware_db import search_family
+    from malware_db import search_family
 
     results = search_family(args.family)
     if not results:
@@ -324,7 +324,7 @@ def cmd_search_family(args: argparse.Namespace) -> None:
 def cmd_search_actor(args: argparse.Namespace) -> None:
     """Search the threat database by threat actor name."""
     print_banner()
-    from c2tracker.malware_db import search_actor
+    from malware_db import search_actor
 
     results = search_actor(args.actor)
     if not results:
@@ -349,7 +349,7 @@ def cmd_search_actor(args: argparse.Namespace) -> None:
 def cmd_list_db(args: argparse.Namespace) -> None:
     """Display a summary of the built-in threat database."""
     print_banner()
-    from c2tracker.malware_db import get_all_actors, get_all_families, get_all_ips, search_actor, search_family
+    from malware_db import get_all_actors, get_all_families, get_all_ips, search_actor, search_family
 
     families = get_all_families()
     actors = get_all_actors()
@@ -376,8 +376,8 @@ def cmd_list_db(args: argparse.Namespace) -> None:
 def cmd_hunt(args: argparse.Namespace) -> None:
     """Hunt for C2 infrastructure across the internet via Shodan queries."""
     print_banner()
-    from c2tracker.config import Config
-    from c2tracker.hunter import hunt_shodan, get_products
+    from config import Config
+    from hunter import hunt_shodan, get_products
 
     config = Config.from_env(args.env_file)
     errors = config.validate(require_shodan=True, require_censys=False)

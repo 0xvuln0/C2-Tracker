@@ -6,7 +6,7 @@ import ipaddress
 
 import shodan
 
-from c2tracker.models import ShodanResult
+from models import ShodanResult
 
 
 def lookup_ip(api_key: str, ip: str) -> ShodanResult:

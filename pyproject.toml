@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-c2tracker = "c2tracker.cli:main"
+c2tracker = "cli:main"
 
 [tool.ruff]
 line-length = 100

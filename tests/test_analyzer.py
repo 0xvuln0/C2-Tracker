@@ -1,6 +1,6 @@
 """Tests for the threat analyzer — scoring logic, threat labels, and detection."""
 
-from c2tracker.analyzer import (
+from analyzer import (
     C2_PORT_INDICATORS,
     KNOWN_C2_FRAMEWORKS,
     THRESHOLD_CRITICAL,
@@ -12,8 +12,8 @@ from c2tracker.analyzer import (
     analyze_shodan_banners,
     analyze_threat,
 )
-from c2tracker.models import CensysResult, ShodanResult
-from c2tracker.malware_db import (
+from models import CensysResult, ShodanResult
+from malware_db import (
     KNOWN_MALWARE_IPS,
     check_ip,
     get_all_actors,
@@ -21,7 +21,7 @@ from c2tracker.malware_db import (
     search_actor,
     search_family,
 )
-from c2tracker.network import Connection
+from network import Connection
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ class TestThreatResultScoring:
         assert r.score == 25
 
     def test_db_matches_contribute_20_each_capped_at_40(self):
-        from c2tracker.malware_db import MalwareIP
+        from malware_db import MalwareIP
         m1 = MalwareIP("1.2.3.4", "Cobalt Strike", "Various", "test", 50050)
         m2 = MalwareIP("1.2.3.4", "Metasploit", "Various", "test", 4444)
         r = ThreatResult(ip="1.2.3.4", malware_db_matches=[m1, m2])

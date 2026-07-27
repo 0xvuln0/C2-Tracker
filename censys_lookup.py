@@ -6,7 +6,7 @@ import ipaddress
 
 from censys.search import CensysHosts
 
-from c2tracker.models import CensysResult
+from models import CensysResult
 
 
 def lookup_ip(api_id: str, api_secret: str, ip: str) -> CensysResult:

@@ -1,6 +1,6 @@
 """Tests for network utility functions."""
 
-from c2tracker.network import Connection, is_private_ip
+from network import Connection, is_private_ip
 
 
 class TestIsPrivateIp:

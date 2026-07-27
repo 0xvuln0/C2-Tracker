@@ -1,4 +1,4 @@
 """Allow running as: python -m c2tracker scan"""
-from c2tracker.cli import main
+from cli import main
 
 main()
