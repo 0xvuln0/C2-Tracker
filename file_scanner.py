@@ -263,10 +263,12 @@ MALWARE_SIGNATURES: dict[str, list[str]] = {
     "Mirai Botnet": [
         r"mirai",
         r"Mirai",
-        r"botnet",
-        r"/bin/sh",
-        r"/bin/busybox",
-        r"echo.*>.*\/proc",
+        r"/bin/busybox.*telnet",
+        r"scanner_init",
+        r"killer_init",
+        r"reporter_init",
+        r"KILLATONEDIE",
+        r"table-.*\.bin",
     ],
     "Mozi Botnet": [
         r"mozi",
@@ -637,9 +639,19 @@ BINARY_FAMILY_SIGNATURES: list[tuple[bytes, str, str, int]] = [
     # Mirai propagation pattern
     (b"/bin/busybox",
      "Mirai Botnet", "Mirai botnet binary", 85),
-    # Mirai DDoS pattern
-    (b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-     "Mirai Botnet", "Mirai DDoS padding pattern", 70),
+    # Mirai module names (from leaked source)
+    (b"scanner_init",
+     "Mirai Botnet", "Mirai scanner module", 90),
+    (b"killer_init",
+     "Mirai Botnet", "Mirai killer module", 90),
+    (b"reporter_init",
+     "Mirai Botnet", "Mirai reporter module", 90),
+    # Mirai-specific string constants
+    (b"KILLATONEDIE",
+     "Mirai Botnet", "Mirai kill-on-exit string", 95),
+    # Mirai default credentials scanning
+    (b"GET /cdn-cgi/",
+     "Mirai Botnet", "Mirai Cloudflare bypass pattern", 85),
 
     # --- Reverse Shell Families ---
     # Python reverse shell
@@ -953,13 +965,50 @@ def extract_ips_from_strings(strings: list[str]) -> list[str]:
 
 def extract_domains_from_strings(strings: list[str]) -> list[str]:
     """Extract domains from string data."""
+    VALID_TLDS = {
+        "com", "net", "org", "io", "co", "info", "biz", "xyz", "top", "site",
+        "online", "store", "tech", "dev", "app", "me", "cc", "ws", "su",
+        "ru", "cn", "de", "uk", "fr", "jp", "br", "in", "au", "nl", "it",
+        "es", "se", "no", "dk", "fi", "pl", "cz", "at", "ch", "be", "pt",
+        "gov", "edu", "mil", "int", "onion", "bit", "tk", "ml", "ga", "cf",
+        "gq", "pw", "to", "sh", "ch", "ly", "la", "im", "fm", "gg",
+    }
+    # Exclude ELF section names, Python attributes, and other non-domains
+    ELF_SECTIONS = {
+        ".text", ".data", ".bss", ".rodata", ".plt", ".got", ".plt.got",
+        ".init", ".fini", ".dynamic", ".dynsym", ".dynstr", ".rela",
+        ".gnu", ".note", ".comment", ".debug", ".eh_frame", ".gcc_except",
+        ".ctors", ".dtors", ".tbss", ".tdata", ".init_array", ".fini_array",
+        ".jcr", ".got.plt", ".init_array", ".fini_array",
+    }
+    PYTHON_ATTRS = {
+        "client.send", "client.connect", "client.recv", "client.close",
+        "s.send", "s.connect", "s.recv", "s.close", "s.settimeout",
+        "os.system", "os.popen", "os.path", "sys.exit", "sys.argv",
+        "subprocess.call", "subprocess.Popen", "socket.socket",
+        "threading.Thread", "time.sleep", "re.search", "re.match",
+    }
     domain_pattern = re.compile(r"\b([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,})\b")
     found_domains = set()
     for s in strings:
         for match in domain_pattern.finditer(s):
             domain = match.group(1).lower()
-            if len(domain) > 5 and not domain.endswith((".exe", ".dll", ".sys", ".ocx", ".txt", ".log", ".tmp")):
-                found_domains.add(domain)
+            parts = domain.rsplit(".", 1)
+            if len(parts) != 2:
+                continue
+            name, tld = parts
+            if tld not in VALID_TLDS:
+                continue
+            if domain in ELF_SECTIONS or domain in PYTHON_ATTRS:
+                continue
+            if domain.startswith(".") or len(domain) < 5:
+                continue
+            if domain.endswith((".exe", ".dll", ".sys", ".ocx", ".txt", ".log", ".tmp")):
+                continue
+            # Require the name part to look like a real domain (at least 2 chars, not just a section prefix)
+            if len(name) < 2:
+                continue
+            found_domains.add(domain)
     return sorted(found_domains)
 
 
@@ -1616,46 +1665,63 @@ def scan_file(file_path: str) -> FileScanResult:
     except Exception:
         pass
 
-    # Calculate risk score
-    score = 0
-    score += len(result.detected_families) * 25
-    score += len(result.detected_signatures) * 10
-    score += len(result.suspicious_strings) * 5
-    if result.entropy > 7.0:
-        score += 10
-    if result.entropy > 7.5:
-        score += 10
-    if result.file_type == "PE (Windows executable)":
-        score += 5
-    if result.embedded_ips:
-        score += min(len(result.embedded_ips) * 2, 10)
+    # Calculate risk score — use logarithmic scaling and diminishing returns
+    # so that files with many indicators score higher than files with few.
+    score = 0.0
 
-    # Heavily weight certain high-confidence indicators
+    # Families: logarithmic scaling (1=15, 2=24, 3=30, 5=39, 10=52)
+    if result.detected_families:
+        score += 15 * math.log2(1 + len(result.detected_families))
+
+    # Binary signatures: diminishing returns
+    if result.detected_signatures:
+        score += 8 * math.log2(1 + len(result.detected_signatures))
+
+    # Suspicious strings: diminishing returns
+    if result.suspicious_strings:
+        score += 3 * math.log2(1 + len(result.suspicious_strings))
+
+    # Entropy: small bonus for high entropy
+    if result.entropy > 7.0:
+        score += 5
+    if result.entropy > 7.5:
+        score += 5
+
+    # File type bonus
+    if result.file_type == "PE (Windows executable)":
+        score += 3
+
+    # Embedded IPs: diminishing returns
+    if result.embedded_ips:
+        score += 2 * math.log2(1 + len(result.embedded_ips))
+
+    # Heavily weight certain high-confidence indicators (each capped)
     text_lower = " ".join(strings).lower()
     if any(p in text_lower for p in ["mimikatz", "sekurlsa", "kerberos::golden"]):
-        score += 30
+        score += 20
     if any(p in text_lower for p in ["reverse_tcp", "meterpreter", "bind_tcp"]):
-        score += 30
+        score += 20
     if any(p in text_lower for p in ["/dev/tcp/", "bash -i", "nc -e /bin/sh", "nc -e /bin/bash"]):
-        score += 25
-    if any(p in text_lower for p in ["virtualalloc", "virtualprotect", "writemem"]):
-        score += 20
-    if any(p in text_lower for p in ["schtasks.*create", "reg add.*\\\\run"]):
         score += 15
+    if any(p in text_lower for p in ["virtualalloc", "virtualprotect", "writemem"]):
+        score += 10
+    if any(p in text_lower for p in ["schtasks.*create", "reg add.*\\\\run"]):
+        score += 8
     if any(p in text_lower for p in ["disablerealtime", "stop windefend", "delete shadows"]):
-        score += 20
+        score += 10
     if any(p in text_lower for p in ["webshell", "webshell", "shell_exec($_", "eval($_"]):
-        score += 25
+        score += 15
 
-    # Bonus for ELF/Linux malware indicators
+    # Bonus for ELF/Linux malware indicators (diminishing)
     if result.file_type == "ELF (Linux executable)":
         elf_indicators = ["/bin/sh", "/bin/bash", "busybox", "mirai", "botnet", "wget.*sh", "curl.*sh"]
-        if any(ind in text_lower for ind in elf_indicators):
-            score += 20
+        elf_hits = sum(1 for ind in elf_indicators if ind in text_lower)
+        if elf_hits:
+            score += 5 * math.log2(1 + elf_hits)
         if result.entropy > 6.5:
-            score += 5
+            score += 3
 
-    # Bonus for shellcode indicators
+    # Bonus for shellcode indicators (diminishing)
     shellcode_indicators = [
         "Linux x86-64 syscall", "INT 0x80", "XOR EAX,EAX",
         "Socket syscall", "Connect syscall", "NOP sled",
@@ -1664,21 +1730,20 @@ def scan_file(file_path: str) -> FileScanResult:
     ]
     shellcode_hits = sum(1 for si in shellcode_indicators
                          if any(si in s for s in result.suspicious_strings))
-    if shellcode_hits >= 3:
-        score += 30
-    elif shellcode_hits >= 1:
-        score += 20
+    if shellcode_hits:
+        score += 5 * math.log2(1 + shellcode_hits)
 
     # Extra penalty for small ELF with shellcode characteristics
     if data[:4] == b"\x7fELF" and len(data) < 500:
-        score += 25
+        score += 10
 
-    # Bonus for binary family matches (high confidence)
+    # Bonus for binary family matches (high confidence, diminishing)
     if bin_families:
         high_conf = [f for f, _, c in bin_families if c >= 80]
-        score += len(high_conf) * 15
+        if high_conf:
+            score += 10 * math.log2(1 + len(high_conf))
 
-    # Bonus for unusual behavior indicators
+    # Bonus for unusual behavior indicators (diminishing)
     anti_analysis_indicators = [
         "Anti-analysis:", "Anti-VM:", "Anti-sandbox:", "Obfuscation:",
         "Suspicious PE section:", "Double extension", "Manual import loading",
@@ -1686,12 +1751,10 @@ def scan_file(file_path: str) -> FileScanResult:
     ]
     anti_hits = sum(1 for ai in anti_analysis_indicators
                     if any(ai in s for s in result.suspicious_strings))
-    if anti_hits >= 3:
-        score += 25
-    elif anti_hits >= 1:
-        score += 15
+    if anti_hits:
+        score += 5 * math.log2(1 + anti_hits)
 
-    result.risk_score = min(score, 100)
+    result.risk_score = min(round(score), 100)
 
     if result.risk_score >= 70:
         result.risk_label = "MALICIOUS"
