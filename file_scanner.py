@@ -1665,63 +1665,28 @@ def scan_file(file_path: str) -> FileScanResult:
     except Exception:
         pass
 
-    # Calculate risk score — use logarithmic scaling and diminishing returns
-    # so that files with many indicators score higher than files with few.
+    # Calculate risk score
+    # Design: behaviors and families both contribute, neither suppresses the other.
+    # Max breakdown: behaviors ~55, families ~25, context ~20 = ~100
     score = 0.0
 
-    # Families: logarithmic scaling (1=15, 2=24, 3=30, 5=39, 10=52)
-    if result.detected_families:
-        score += 15 * math.log2(1 + len(result.detected_families))
-
-    # Binary signatures: diminishing returns
-    if result.detected_signatures:
-        score += 8 * math.log2(1 + len(result.detected_signatures))
-
-    # Suspicious strings: diminishing returns
-    if result.suspicious_strings:
-        score += 3 * math.log2(1 + len(result.suspicious_strings))
-
-    # Entropy: small bonus for high entropy
-    if result.entropy > 7.0:
-        score += 5
-    if result.entropy > 7.5:
-        score += 5
-
-    # File type bonus
-    if result.file_type == "PE (Windows executable)":
-        score += 3
-
-    # Embedded IPs: diminishing returns
-    if result.embedded_ips:
-        score += 2 * math.log2(1 + len(result.embedded_ips))
-
-    # Heavily weight certain high-confidence indicators (each capped)
-    text_lower = " ".join(strings).lower()
-    if any(p in text_lower for p in ["mimikatz", "sekurlsa", "kerberos::golden"]):
-        score += 20
-    if any(p in text_lower for p in ["reverse_tcp", "meterpreter", "bind_tcp"]):
-        score += 20
-    if any(p in text_lower for p in ["/dev/tcp/", "bash -i", "nc -e /bin/sh", "nc -e /bin/bash"]):
+    # === BEHAVIORAL INDICATORS (up to ~55 pts) ===
+    # The primary signal. More/stronger behaviors = higher score.
+    n_behaviors = len(result.suspicious_strings)
+    if n_behaviors >= 15:
+        score += 40
+    elif n_behaviors >= 10:
+        score += 30
+    elif n_behaviors >= 7:
+        score += 22
+    elif n_behaviors >= 4:
         score += 15
-    if any(p in text_lower for p in ["virtualalloc", "virtualprotect", "writemem"]):
-        score += 10
-    if any(p in text_lower for p in ["schtasks.*create", "reg add.*\\\\run"]):
+    elif n_behaviors >= 2:
         score += 8
-    if any(p in text_lower for p in ["disablerealtime", "stop windefend", "delete shadows"]):
-        score += 10
-    if any(p in text_lower for p in ["webshell", "webshell", "shell_exec($_", "eval($_"]):
-        score += 15
+    elif n_behaviors >= 1:
+        score += 4
 
-    # Bonus for ELF/Linux malware indicators (diminishing)
-    if result.file_type == "ELF (Linux executable)":
-        elf_indicators = ["/bin/sh", "/bin/bash", "busybox", "mirai", "botnet", "wget.*sh", "curl.*sh"]
-        elf_hits = sum(1 for ind in elf_indicators if ind in text_lower)
-        if elf_hits:
-            score += 5 * math.log2(1 + elf_hits)
-        if result.entropy > 6.5:
-            score += 3
-
-    # Bonus for shellcode indicators (diminishing)
+    # Shellcode indicators — each adds real evidence (up to +15)
     shellcode_indicators = [
         "Linux x86-64 syscall", "INT 0x80", "XOR EAX,EAX",
         "Socket syscall", "Connect syscall", "NOP sled",
@@ -1730,29 +1695,73 @@ def scan_file(file_path: str) -> FileScanResult:
     ]
     shellcode_hits = sum(1 for si in shellcode_indicators
                          if any(si in s for s in result.suspicious_strings))
-    if shellcode_hits:
-        score += 5 * math.log2(1 + shellcode_hits)
+    score += min(shellcode_hits * 2, 15)
 
-    # Extra penalty for small ELF with shellcode characteristics
-    if data[:4] == b"\x7fELF" and len(data) < 500:
-        score += 10
-
-    # Bonus for binary family matches (high confidence, diminishing)
-    if bin_families:
-        high_conf = [f for f, _, c in bin_families if c >= 80]
-        if high_conf:
-            score += 10 * math.log2(1 + len(high_conf))
-
-    # Bonus for unusual behavior indicators (diminishing)
+    # Anti-analysis indicators — each is strong evidence (up to +15)
     anti_analysis_indicators = [
         "Anti-analysis:", "Anti-VM:", "Anti-sandbox:", "Obfuscation:",
         "Suspicious PE section:", "Double extension", "Manual import loading",
         "very few readable strings", "executable+writable",
+        "IsDebuggerPresent", "NtQueryInformationProcess",
+        "CheckRemoteDebuggerPresent",
     ]
     anti_hits = sum(1 for ai in anti_analysis_indicators
                     if any(ai in s for s in result.suspicious_strings))
-    if anti_hits:
-        score += 5 * math.log2(1 + anti_hits)
+    score += min(anti_hits * 3, 15)
+
+    # Entropy — high entropy is a moderate signal
+    if result.entropy > 7.0:
+        score += 4
+    if result.entropy > 7.5:
+        score += 4
+
+    # Embedded IPs — weak signal
+    if result.embedded_ips:
+        score += min(len(result.embedded_ips), 4)
+
+    # === FAMILY / SIGNATURE MATCHES (up to ~25 pts) ===
+    # Confirms identity but should not override behavioral evidence.
+    if result.detected_families:
+        score += min(15 * math.log2(1 + len(result.detected_families)), 20)
+
+    if result.detected_signatures:
+        score += min(5 * math.log2(1 + len(result.detected_signatures)), 10)
+
+    # Binary family matches (high confidence only)
+    if bin_families:
+        high_conf = [f for f, _, c in bin_families if c >= 80]
+        if high_conf:
+            score += min(8 * math.log2(1 + len(high_conf)), 10)
+
+    # === CONTEXTUAL BONUSES (up to ~20 pts) ===
+    # Specific high-confidence indicators that should push borderline cases.
+    text_lower = " ".join(strings).lower()
+
+    # High-confidence malware toolkits
+    if any(p in text_lower for p in ["mimikatz", "sekurlsa", "kerberos::golden"]):
+        score += 12
+    if any(p in text_lower for p in ["reverse_tcp", "meterpreter", "bind_tcp"]):
+        score += 8
+    if any(p in text_lower for p in ["/dev/tcp/", "bash -i", "nc -e /bin/sh", "nc -e /bin/bash"]):
+        score += 6
+    if any(p in text_lower for p in ["virtualalloc", "virtualprotect", "writemem"]):
+        score += 6
+    if any(p in text_lower for p in ["schtasks.*create", "reg add.*\\\\run"]):
+        score += 5
+    if any(p in text_lower for p in ["disablerealtime", "stop windefend", "delete shadows"]):
+        score += 6
+    if any(p in text_lower for p in ["webshell", "shell_exec($_", "eval($_"]):
+        score += 8
+
+    # ELF/Linux-specific behavioral bonus
+    if result.file_type == "ELF (Linux executable)":
+        elf_indicators = ["/bin/sh", "/bin/bash", "busybox", "mirai", "botnet", "wget.*sh", "curl.*sh"]
+        elf_hits = sum(1 for ind in elf_indicators if ind in text_lower)
+        score += min(elf_hits * 2, 8)
+
+    # Small ELF with shellcode characteristics — high-confidence indicator
+    if data[:4] == b"\x7fELF" and len(data) < 500:
+        score += 8
 
     result.risk_score = min(round(score), 100)
 
