@@ -11,7 +11,6 @@ import os
 import time
 from typing import Any
 
-
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache")
 SHODAN_CACHE = os.path.join(CACHE_DIR, "shodan.json")
 CENSYS_CACHE = os.path.join(CACHE_DIR, "censys.json")

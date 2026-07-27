@@ -13,12 +13,10 @@ from __future__ import annotations
 import json
 import os
 import time
-from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any
 
 import requests
-
 
 THREATFOX_API = "https://threatfox-api.abuse.ch/api/v1/"
 URLHAUS_API = "https://urlhaus-api.abuse.ch/v1/"

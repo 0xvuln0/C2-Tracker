@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
 try:
     import yara
@@ -369,7 +368,7 @@ class YaraScanner:
             os.path.dirname(os.path.abspath(__file__)), "rules"
         )
         self.include_builtin = include_builtin
-        self._compiled: Optional[object] = None
+        self._compiled: object | None = None
         self._rule_count = 0
 
         if YARA_AVAILABLE:
@@ -404,10 +403,10 @@ class YaraScanner:
         # File-based rules
         for path in self._collect_rule_files():
             try:
-                with open(path, "r", encoding="utf-8") as fh:
+                with open(path, encoding="utf-8") as fh:
                     key = f"file_{os.path.basename(path)}"
                     sources[key] = fh.read()
-            except (IOError, UnicodeDecodeError):
+            except (OSError, UnicodeDecodeError):
                 continue
 
         if not sources:
@@ -418,7 +417,7 @@ class YaraScanner:
                 sources=sources  # type: ignore[arg-type]
             )
             self._rule_count = len(sources)
-        except yara.SyntaxError as exc:
+        except yara.SyntaxError:
             # Attempt to compile sources individually to isolate bad rules
             self._compiled = None
             self._rule_count = 0

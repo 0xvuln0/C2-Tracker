@@ -151,6 +151,6 @@ def is_private_ip(ip: str) -> bool:
             return True
         if first_octet == 127:
             return True
-    except socket.error:
+    except OSError:
         pass
     return False

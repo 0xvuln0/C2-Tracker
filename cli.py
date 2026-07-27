@@ -353,7 +353,13 @@ def cmd_search_actor(args: argparse.Namespace) -> None:
 def cmd_list_db(args: argparse.Namespace) -> None:
     """Display a summary of the built-in threat database."""
     print_banner()
-    from malware_db import get_all_actors, get_all_families, get_all_ips, search_actor, search_family
+    from malware_db import (
+        get_all_actors,
+        get_all_families,
+        get_all_ips,
+        search_actor,
+        search_family,
+    )
 
     families = get_all_families()
     actors = get_all_actors()
@@ -381,7 +387,7 @@ def cmd_hunt(args: argparse.Namespace) -> None:
     """Hunt for C2 infrastructure across the internet via Shodan queries."""
     print_banner()
     from config import Config
-    from hunter import hunt_shodan, get_products
+    from hunter import get_products, hunt_shodan
 
     config = Config.from_env(args.env_file)
     errors = config.validate(require_shodan=True, require_censys=False)
@@ -395,7 +401,7 @@ def cmd_hunt(args: argparse.Namespace) -> None:
     products = args.products if args.products else None
     output_dir = args.output or "data"
 
-    console.print(f"\n[bold]Hunting C2 infrastructure via Shodan...[/bold]")
+    console.print("\n[bold]Hunting C2 infrastructure via Shodan...[/bold]")
     if products:
         console.print(f"  Products: {', '.join(products)}")
     else:
@@ -440,8 +446,9 @@ def cmd_scan_file(args: argparse.Namespace) -> None:
     output_format = getattr(args, "format", None)
     if not output_format:
         print_banner()
-    from file_scanner import scan_file
     from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from file_scanner import scan_file
 
     files = args.files
     if not files:
@@ -504,9 +511,9 @@ def cmd_scan_file(args: argparse.Namespace) -> None:
 
 def _output_results(results, fmt: str) -> None:
     """Output results in the specified format."""
-    import json as _json
     import csv
     import io
+    import json as _json
 
     if fmt == "json":
         data = []
@@ -574,7 +581,12 @@ def _output_results(results, fmt: str) -> None:
 def cmd_update(args: argparse.Namespace) -> None:
     """Update the malware IOC database from online feeds."""
     print_banner()
-    from db_updater import update_if_stale, _needs_update, fetch_threatfox, fetch_urlhaus, merge_iocs
+    from db_updater import (
+        _needs_update,
+        fetch_threatfox,
+        fetch_urlhaus,
+        merge_iocs,
+    )
 
     force = getattr(args, "force", False)
 
@@ -587,10 +599,9 @@ def cmd_update(args: argparse.Namespace) -> None:
         with console.status("[cyan]Fetching URLhaus IOCs...[/cyan]"):
             uh = fetch_urlhaus()
         console.print(f"  URLhaus: {len(uh)} IOCs fetched")
-        from malware_db import MalwareIP
         db_path = os.path.join(_project_root, "malware_db.py")
         stats = merge_iocs(tf + uh, existing_db_path=db_path)
-        console.print(f"\n[bold green]Update complete![/bold green]")
+        console.print("\n[bold green]Update complete![/bold green]")
         console.print(f"  New IOCs added: {stats['new_count']}")
         console.print(f"  Total online IOCs: {stats['total_online']}")
         console.print(f"  Last updated: {stats['last_update']}")
@@ -599,7 +610,7 @@ def cmd_update(args: argparse.Namespace) -> None:
         cache = _load_cache()
         console.print(f"[yellow]Database is up to date (last update: {cache.get('last_update', 'never')})[/yellow]")
         console.print(f"  Online IOCs cached: {len(cache.get('ips', {}))}")
-        console.print(f"  Use --force to update now")
+        console.print("  Use --force to update now")
 
 
 def cmd_watch(args: argparse.Namespace) -> None:

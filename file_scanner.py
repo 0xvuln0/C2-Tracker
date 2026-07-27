@@ -16,7 +16,6 @@ import re
 import struct
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 def _load_scoring_config() -> dict:
@@ -766,9 +765,9 @@ class LearningDB:
     def _load(self) -> dict:
         if os.path.exists(self.path):
             try:
-                with open(self.path, "r") as f:
+                with open(self.path) as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 pass
         return {
             "scans": 0,
@@ -785,10 +784,10 @@ class LearningDB:
         try:
             with open(self.path, "w") as f:
                 json.dump(self.data, f, indent=2)
-        except IOError:
+        except OSError:
             pass
 
-    def record_scan(self, result: "FileScanResult") -> None:
+    def record_scan(self, result: FileScanResult) -> None:
         """Record a scan result to improve future detection."""
         self.data["scans"] += 1
 
@@ -823,12 +822,12 @@ class LearningDB:
 
         self._save()
 
-    def _learn_byte_patterns(self, result: "FileScanResult") -> None:
+    def _learn_byte_patterns(self, result: FileScanResult) -> None:
         """Extract and record byte patterns from known malicious files."""
         try:
             with open(result.path, "rb") as f:
                 data = f.read(1024 * 1024)  # Max 1MB
-        except IOError:
+        except OSError:
             return
 
         # Extract unique 8-byte sequences that appear in shellcode
@@ -853,7 +852,7 @@ class LearningDB:
                         if family not in self.data["byte_patterns"][pattern_hex]["families"]:
                             self.data["byte_patterns"][pattern_hex]["families"].append(family)
 
-    def get_similar_families(self, result: "FileScanResult") -> list[str]:
+    def get_similar_families(self, result: FileScanResult) -> list[str]:
         """Find similar malware based on learned patterns."""
         similar = set()
 
@@ -866,7 +865,7 @@ class LearningDB:
         try:
             with open(result.path, "rb") as f:
                 data = f.read(1024 * 1024)
-        except IOError:
+        except OSError:
             return list(similar)
 
         for i in range(0, min(len(data) - 8, 100000), 4):
@@ -1077,7 +1076,7 @@ def check_pe_info(data: bytes) -> dict:
             except (OSError, OverflowError):
                 pass
 
-        opt_header_size = struct.unpack_from("<H", data, pe_offset + 20)[0]
+        _opt_header_size = struct.unpack_from("<H", data, pe_offset + 20)[0]
         opt_start = pe_offset + 24
         magic = struct.unpack_from("<H", data, opt_start)[0]
         if magic == 0x20b:
@@ -1105,12 +1104,12 @@ def check_elf_info(data: bytes) -> dict:
 
         if ei_class == 2 and ei_data == 1:  # 64-bit little-endian
             e_type = struct.unpack_from("<H", data, 16)[0]
-            e_machine = struct.unpack_from("<H", data, 18)[0]
+            _e_machine = struct.unpack_from("<H", data, 18)[0]
             e_entry = struct.unpack_from("<Q", data, 24)[0]
-            e_phoff = struct.unpack_from("<Q", data, 28)[0]
-            e_shoff = struct.unpack_from("<Q", data, 40)[0]
-            e_flags = struct.unpack_from("<I", data, 48)[0]
-            e_ehsize = struct.unpack_from("<H", data, 52)[0]
+            _e_phoff = struct.unpack_from("<Q", data, 28)[0]
+            _e_shoff = struct.unpack_from("<Q", data, 40)[0]
+            _e_flags = struct.unpack_from("<I", data, 48)[0]
+            _e_ehsize = struct.unpack_from("<H", data, 52)[0]
             e_phnum = struct.unpack_from("<H", data, 56)[0]
             e_shnum = struct.unpack_from("<H", data, 60)[0]
 
@@ -1132,7 +1131,7 @@ def check_elf_info(data: bytes) -> dict:
         elif ei_class == 1 and ei_data == 1:  # 32-bit little-endian
             e_type = struct.unpack_from("<H", data, 16)[0]
             e_entry = struct.unpack_from("<I", data, 24)[0]
-            e_shoff = struct.unpack_from("<I", data, 32)[0]
+            _e_shoff = struct.unpack_from("<I", data, 32)[0]
             e_shnum = struct.unpack_from("<H", data, 48)[0]
 
             type_names = {1: "REL (relocatable)", 2: "EXEC (executable)",
@@ -1319,7 +1318,7 @@ def detect_elf_anomalies(data: bytes) -> list[str]:
     return anomalies
 
 
-def analyze_unusual_behavior(data: bytes, result: "FileScanResult") -> list[str]:
+def analyze_unusual_behavior(data: bytes, result: FileScanResult) -> list[str]:
     """Analyze binary for unusual/suspicious behavior patterns."""
     findings = []
 

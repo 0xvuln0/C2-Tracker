@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from malware_db import MalwareIP, check_ip
-from network import Connection
 from models import CensysResult, ShodanResult
+from network import Connection
 
 # Scoring weights — each detection source contributes a weighted amount
 SCORE_FRAMEWORK_DETECTED = 30

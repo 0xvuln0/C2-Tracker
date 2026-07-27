@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from file_scanner import FileScanResult
 
 
-def export_json(results: "FileScanResult | list[FileScanResult]", output_path: str) -> str:
+def export_json(results: FileScanResult | list[FileScanResult], output_path: str) -> str:
     """Export scan results to JSON file.
 
     Args:
@@ -54,7 +54,7 @@ def export_json(results: "FileScanResult | list[FileScanResult]", output_path: s
     return output_path
 
 
-def export_csv(results: "FileScanResult | list[FileScanResult]", output_path: str) -> str:
+def export_csv(results: FileScanResult | list[FileScanResult], output_path: str) -> str:
     """Export scan results to CSV file.
 
     Args:
@@ -96,7 +96,7 @@ def export_csv(results: "FileScanResult | list[FileScanResult]", output_path: st
     return output_path
 
 
-def export_iocs(results: "FileScanResult | list[FileScanResult]", output_path: str) -> str:
+def export_iocs(results: FileScanResult | list[FileScanResult], output_path: str) -> str:
     """Export IOCs (hashes, IPs, domains) to a text file, one per line.
 
     Args:

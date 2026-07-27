@@ -185,7 +185,7 @@ TECHNIQUES: dict[str, dict] = {
         "name": "System Information Discovery",
         "description": "Adversaries may attempt to get detailed information about the system.",
         "tactics": ["TA0007"],
-        "patterns": [r"systeminfo", r"uname\s+-a", r"Get-WmiObject.*Win32_OperatingSystem", r"hostname"],
+        "patterns": [r"systeminfo", r"uname", r"Get-WmiObject", r"hostname", r"/etc/os-release"],
     },
     "T1049": {
         "name": "System Network Connections Discovery",
@@ -311,12 +311,6 @@ TECHNIQUES: dict[str, dict] = {
             r"\.pdf\.exe", r"\.doc\.exe", r"\.jpg\.exe",
             r"double.*ext", r"masquerad",
         ],
-    },
-    "T1082": {
-        "name": "System Information Discovery",
-        "description": "Adversaries may attempt to get detailed information about the operating system.",
-        "tactics": ["TA0007"],
-        "patterns": [r"systeminfo", r"uname", r"Get-WmiObject", r"/etc/os-release"],
     },
     "T1497": {
         "name": "Virtualization/Sandbox Evasion",

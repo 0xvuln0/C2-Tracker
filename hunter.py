@@ -14,9 +14,6 @@ from pathlib import Path
 import shodan
 from shodan import exception as shodan_errors
 
-from models import ShodanResult
-
-
 # Curated Shodan queries for known C2/malware infrastructure.
 # Sources:
 #   - https://michaelkoczwara.medium.com/hunting-c2-with-shodan-223ca250d06f

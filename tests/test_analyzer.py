@@ -3,16 +3,12 @@
 from analyzer import (
     C2_PORT_INDICATORS,
     KNOWN_C2_FRAMEWORKS,
-    THRESHOLD_CRITICAL,
-    THRESHOLD_HIGH,
-    THRESHOLD_MEDIUM,
     ThreatResult,
     analyze_censys_services,
     analyze_connection_ports,
     analyze_shodan_banners,
     analyze_threat,
 )
-from models import CensysResult, ShodanResult
 from malware_db import (
     KNOWN_MALWARE_IPS,
     check_ip,
@@ -21,8 +17,8 @@ from malware_db import (
     search_actor,
     search_family,
 )
+from models import CensysResult, ShodanResult
 from network import Connection
-
 
 # ---------------------------------------------------------------------------
 # ThreatResult scoring and labelling
