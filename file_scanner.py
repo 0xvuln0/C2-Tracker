@@ -739,6 +739,223 @@ def check_pe_info(data: bytes) -> dict:
     return info
 
 
+def check_elf_info(data: bytes) -> dict:
+    """Extract basic ELF file information and detect anomalies."""
+    info = {}
+    if len(data) < 64:
+        return info
+    if data[:4] != b"\x7fELF":
+        return info
+
+    try:
+        ei_class = data[4]  # 1 = 32-bit, 2 = 64-bit
+        ei_data = data[5]   # 1 = little-endian, 2 = big-endian
+
+        if ei_class == 2 and ei_data == 1:  # 64-bit little-endian
+            e_type = struct.unpack_from("<H", data, 16)[0]
+            e_machine = struct.unpack_from("<H", data, 18)[0]
+            e_entry = struct.unpack_from("<Q", data, 24)[0]
+            e_phoff = struct.unpack_from("<Q", data, 28)[0]
+            e_shoff = struct.unpack_from("<Q", data, 40)[0]
+            e_flags = struct.unpack_from("<I", data, 48)[0]
+            e_ehsize = struct.unpack_from("<H", data, 52)[0]
+            e_phnum = struct.unpack_from("<H", data, 56)[0]
+            e_shnum = struct.unpack_from("<H", data, 60)[0]
+
+            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)",
+                         3: "DYN (shared object)", 4: "CORE"}
+            info["type"] = type_names.get(e_type, f"0x{e_type:x}")
+            info["entry"] = f"0x{e_entry:x}"
+            info["sections"] = e_shnum
+            info["segments"] = e_phnum
+
+            # Detect anomalies
+            if e_type == 2:  # EXEC
+                info["executable"] = True
+            if e_shnum == 0:
+                info["no_section_headers"] = True
+            if e_entry == 0:
+                info["no_entry_point"] = True
+
+        elif ei_class == 1 and ei_data == 1:  # 32-bit little-endian
+            e_type = struct.unpack_from("<H", data, 16)[0]
+            e_entry = struct.unpack_from("<I", data, 24)[0]
+            e_shoff = struct.unpack_from("<I", data, 32)[0]
+            e_shnum = struct.unpack_from("<H", data, 48)[0]
+
+            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)",
+                         3: "DYN (shared object)", 4: "CORE"}
+            info["type"] = type_names.get(e_type, f"0x{e_type:x}")
+            info["entry"] = f"0x{e_entry:x}"
+            info["sections"] = e_shnum
+
+            if e_type == 2:
+                info["executable"] = True
+            if e_shnum == 0:
+                info["no_section_headers"] = True
+
+    except (struct.error, IndexError):
+        pass
+
+    return info
+
+
+def detect_binary_patterns(data: bytes) -> list[str]:
+    """Detect shellcode and malicious binary patterns in raw bytes."""
+    patterns = []
+
+    # --- Linux x86-64 syscall sequences ---
+    # SYSCALL (0x0f 0x05) is the primary indicator
+    syscall_count = data.count(b"\x0f\x05")
+    if syscall_count >= 2:
+        patterns.append(f"Linux x86-64 syscall sequences ({syscall_count} occurrences)")
+
+    # INT 0x80 (0xcd 0x80) - 32-bit Linux syscalls
+    int80_count = data.count(b"\xcd\x80")
+    if int80_count >= 2:
+        patterns.append(f"Linux x86 INT 0x80 syscalls ({int80_count} occurrences)")
+
+    # --- Common shellcode byte patterns ---
+
+    # XOR EAX,EAX (0x31 0xc0) - zeroing registers
+    xor_eax = data.count(b"\x31\xc0")
+    if xor_eax >= 1:
+        patterns.append(f"XOR EAX,EAX (register zeroing: {xor_eax}x)")
+
+    # XOR EBX,EBX (0x31 0xdb)
+    xor_ebx = data.count(b"\x31\xdb")
+    if xor_ebx >= 1:
+        patterns.append(f"XOR EBX,EBX ({xor_ebx}x)")
+
+    # XOR ECX,ECX (0x31 0xc9)
+    xor_ecx = data.count(b"\x31\xc9")
+    if xor_ecx >= 1:
+        patterns.append(f"XOR ECX,ECX ({xor_ecx}x)")
+
+    # XOR EDX,EDX (0x31 0xd2)
+    xor_edx = data.count(b"\x31\xd2")
+    if xor_edx >= 1:
+        patterns.append(f"XOR EDX,EDX ({xor_edx}x)")
+
+    # PUSH rbp / MOV rbp, rsp (function prologue)
+    if b"\x55\x48\x89\xe5" in data or b"\x55\x48\x8b\xec" in data:
+        patterns.append("Function prologue (PUSH rbp; MOV rbp,rsp)")
+
+    # PUSH rax; POP rdi (common shellcode pattern)
+    push_pop_count = 0
+    for i in range(len(data) - 2):
+        if data[i] == 0x50 and data[i + 2] == 0x5f:  # push rax; ... pop rdi
+            push_pop_count += 1
+    if push_pop_count >= 2:
+        patterns.append(f"PUSH/POP register sequence ({push_pop_count}x)")
+
+    # PUSH 0x2a; POP rax (socket syscall = 42)
+    if b"\x6a\x2a\x58" in data:
+        patterns.append("Socket syscall (PUSH 0x2a; POP rax = SYS_socket)")
+
+    # PUSH 0x29; POP rax (connect syscall = 41)
+    if b"\x6a\x29\x58" in data:
+        patterns.append("Connect syscall (PUSH 0x29; POP rax = SYS_connect)")
+
+    # PUSH 0x01; POP rdi (fd = 1, stdout)
+    if b"\x6a\x01\x5f" in data:
+        patterns.append("File descriptor setup (PUSH 1; POP rdi)")
+
+    # PUSH 0x02; POP rdi (socket type SOCK_STREAM)
+    if b"\x6a\x02\x5f" in data:
+        patterns.append("Socket type setup (PUSH 2; POP rdi = SOCK_STREAM)")
+
+    # JMP/CALL/POP pattern (string decoding in shellcode)
+    if b"\xeb" in data and b"\x5e" in data:  # JMP short + POP rsi
+        patterns.append("JMP/POP pattern (shellcode string decoding)")
+
+    # --- NOP sled detection ---
+    nop_sleds = [b"\x90" * 4, b"\x90" * 8, b"\x90" * 16]
+    for sled in nop_sleds:
+        if sled in data:
+            patterns.append(f"NOP sled ({len(sled)} bytes)")
+            break
+
+    # --- Encoded IP/port detection ---
+    # Look for common port patterns (little-endian 2 bytes after PUSH)
+    common_ports = {
+        b"\x5c\x11": 4444,    # port 4444
+        b"\xbb\x01": 443,     # port 443
+        b"\x50\x00": 80,      # port 80
+        b"\x1f\x90": 34567,   # port 34567
+        b"\x39\x05": 1337,    # port 1337
+        b"\x0d\xbb": 44444,   # port 44444
+        b"\x15\x53": 21298,   # port 21298
+    }
+    for pattern, port in common_ports.items():
+        if pattern in data:
+            patterns.append(f"Encoded port {port} (0x{pattern.hex()})")
+            break
+
+    # Detect IP addresses in network byte order (big-endian)
+    ip_pattern = re.compile(
+        rb"\x02\x00([\x00-\xff]{2})([\x00-\xff]{2})\x51"
+    )
+    match = ip_pattern.search(data)
+    if match:
+        ip_bytes = data[match.start() + 2:match.start() + 6]
+        ip_int = struct.unpack("!I", ip_bytes)[0]
+        ip_str = f"{(ip_int >> 24) & 0xff}.{(ip_int >> 16) & 0xff}.{(ip_int >> 8) & 0xff}.{ip_int & 0xff}"
+        patterns.append(f"Encoded IP address: {ip_str}")
+
+    # Also try to find IPs as 4 consecutive bytes that look like private/public IPs
+    for i in range(len(data) - 3):
+        if data[i] == 0xc0 and data[i + 1] == 0xa8:  # 192.168.x.x
+            patterns.append(f"Private IP 192.168.{data[i+2]}.{data[i+3]} detected")
+            break
+
+    return patterns
+
+
+def detect_elf_anomalies(data: bytes) -> list[str]:
+    """Detect suspicious ELF characteristics."""
+    anomalies = []
+
+    if data[:4] != b"\x7fELF":
+        return anomalies
+
+    elf_info = check_elf_info(data)
+
+    # Very small ELF with no section headers = likely shellcode
+    if len(data) < 500 and elf_info.get("no_section_headers"):
+        anomalies.append("Tiny ELF with no section headers (shellcode loader)")
+
+    # Statically linked (no dynamic section)
+    if b"\x00dynamic\x00" not in data and b"\x00.dynstr\x00" not in data:
+        if len(data) < 2000:
+            anomalies.append("Statically linked (no dynamic section)")
+
+    # Entry point in code segment (typical for shellcode)
+    if elf_info.get("executable") and elf_info.get("no_section_headers"):
+        anomalies.append("Executable ELF without section headers")
+
+    # Detect common shellcode in entry point
+    entry_str = ""
+    try:
+        if elf_info.get("entry"):
+            entry_addr = int(elf_info["entry"], 16)
+            if entry_addr < len(data) - 10:
+                entry_bytes = data[entry_addr:entry_addr + 16]
+                entry_str = entry_bytes.hex()
+    except (ValueError, IndexError):
+        pass
+
+    if entry_str:
+        if "4831ff" in entry_str:  # XOR RDI,RDI
+            anomalies.append("Entry point: XOR RDI,RDI (shellcode)")
+        if "6a0958" in entry_str:  # PUSH 9; POP RAX (setuid)
+            anomalies.append("Entry point: PUSH 9; POP RAX (setuid syscall)")
+        if "6a3c58" in entry_str:  # PUSH 0x3c; POP RAX (exit)
+            anomalies.append("Entry point: PUSH 0x3c; POP RAX (exit syscall)")
+
+    return anomalies
+
+
 def scan_file(file_path: str) -> FileScanResult:
     """Scan a file for malware signatures and suspicious behavior.
 
@@ -794,6 +1011,10 @@ def scan_file(file_path: str) -> FileScanResult:
     if data[:2] == b"MZ":
         result.pe_info = check_pe_info(data)
 
+    # ELF info
+    if data[:4] == b"\x7fELF":
+        result.pe_info = check_elf_info(data)
+
     # Extract strings
     strings = extract_strings(data)
 
@@ -808,6 +1029,17 @@ def scan_file(file_path: str) -> FileScanResult:
                 if sig_match not in result.detected_signatures:
                     result.detected_signatures.append(sig_match)
                 break
+
+    # --- Binary pattern detection (for shellcode, ELF malware, etc.) ---
+    bin_patterns = detect_binary_patterns(data)
+    for bp in bin_patterns:
+        result.suspicious_strings.append(bp)
+
+    # --- ELF anomaly detection ---
+    if data[:4] == b"\x7fELF":
+        elf_anomalies = detect_elf_anomalies(data)
+        for ea in elf_anomalies:
+            result.suspicious_strings.append(ea)
 
     # Extract and check embedded IPs
     result.embedded_ips = extract_ips_from_strings(strings)
@@ -865,6 +1097,24 @@ def scan_file(file_path: str) -> FileScanResult:
             score += 20
         if result.entropy > 6.5:
             score += 5
+
+    # Bonus for shellcode indicators
+    shellcode_indicators = [
+        "Linux x86-64 syscall", "INT 0x80", "XOR EAX,EAX",
+        "Socket syscall", "Connect syscall", "NOP sled",
+        "Encoded port", "Encoded IP", "JMP/POP pattern",
+        "shellcode loader", "Executable ELF without section",
+    ]
+    shellcode_hits = sum(1 for si in shellcode_indicators
+                         if any(si in s for s in result.suspicious_strings))
+    if shellcode_hits >= 3:
+        score += 30
+    elif shellcode_hits >= 1:
+        score += 20
+
+    # Extra penalty for small ELF with shellcode characteristics
+    if data[:4] == b"\x7fELF" and len(data) < 500:
+        score += 25
 
     result.risk_score = min(score, 100)
 
