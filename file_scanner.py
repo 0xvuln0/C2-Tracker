@@ -296,46 +296,280 @@ MALICIOUS_DOMAINS: list[str] = [
 
 # Suspicious string patterns
 SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
+    # --- Reverse Shells ---
+    (r"bash\s+-i\s+>&\s+/dev/tcp/", "Bash reverse shell"),
+    (r"/dev/tcp/\d+\.\d+\.\d+\.\d+/", "Bash /dev/tcp connection"),
+    (r"nc\s+-e\s+/bin/(ba)?sh", "Netcat reverse shell"),
+    (r"ncat\s+-e\s+/bin/(ba)?sh", "Ncat reverse shell"),
+    (r"python.*socket.*connect", "Python reverse shell"),
+    (r"python.*SOCK_STREAM", "Python socket connection"),
+    (r"python.*subprocess", "Python subprocess execution"),
+    (r"perl.*socket.*INET", "Perl reverse shell"),
+    (r"perl.*exec\s*\(", "Perl exec call"),
+    (r"ruby.*TCPSocket", "Ruby reverse shell"),
+    (r"ruby.*exec\s*\(", "Ruby exec call"),
+    (r"php.*fsockopen", "PHP reverse shell"),
+    (r"php.*proc_open", "PHP proc_open"),
+    (r"php.*shell_exec", "PHP shell_exec"),
+    (r"php.*system\s*\(", "PHP system call"),
+    (r"php.*passthru", "PHP passthru"),
+    (r"php.*exec\s*\(", "PHP exec call"),
+    (r"lua.*socket", "Lua reverse shell"),
+    (r"lua.*os.execute", "Lua os.execute"),
+    (r"mkfifo.*nc\s", "FIFO named pipe shell"),
+    (r"nc\s+-l\s+-p\s+\d+", "Netcat listener"),
+    (r"socat\s+tcp:", "Socat reverse shell"),
+    (r"mknod.*b.*666", "Device node creation (FUDGI)"),
+
+    # --- Metasploit / msfvenom ---
+    (r"windows/meterpreter", "Meterpreter payload"),
+    (r"windows/shell", "Windows shell payload"),
+    (r"windows/bind_shell", "Windows bind shell"),
+    (r"linux/x86/meterpreter", "Linux Meterpreter"),
+    (r"linux/x64/meterpreter", "Linux x64 Meterpreter"),
+    (r"linux/x86/shell", "Linux shell payload"),
+    (r"linux/x64/shell", "Linux x64 shell payload"),
+    (r"reverse_tcp", "Reverse TCP shellcode"),
+    (r"reverse_http", "Reverse HTTP payload"),
+    (r"reverse_https", "Reverse HTTPS payload"),
+    (r"bind_tcp", "Bind TCP shellcode"),
+    (r"stageless", "Stageless payload"),
+    (r"staged", "Staged payload"),
+    (r"msfvenom", "msfvenom artifact"),
+    (r"msfconsole", "Metasploit console artifact"),
+    (r"exploit/multi", "Metasploit exploit module"),
+    (r"exploit/windows", "Metasploit Windows exploit"),
+    (r"exploit/linux", "Metasploit Linux exploit"),
+    (r"payload/linux", "Metasploit Linux payload"),
+    (r"payload/windows", "Metasploit Windows payload"),
+    (r"metsvc", "Meterpreter service"),
+    (r"meterpreter\.dll", "Meterpreter DLL"),
+    (r"meterpreter\.exe", "Meterpreter executable"),
+    (r"meterpreter\.py", "Python Meterpreter"),
+    (r"meterpreter\.rb", "Ruby Meterpreter"),
+    (r"reverse_tcp_handler", "Metasploit handler"),
+    (r"LPORT=", "LPORT parameter (Metasploit)"),
+    (r"LHOST=", "LHOST parameter (Metasploit)"),
+    (r"AutoRunScript", "Metasploit AutoRunScript"),
+    (r"SESSION=", "Metasploit session reference"),
+
+    # --- Shellcode / Assembly ---
+    (r"\\x90\\x90\\x90\\x90", "NOP sled (NOP x4)"),
+    (r"\x90\x90\x90\x90", "NOP sled (binary)"),
+    (r"\\x31\\xc0", "XOR EAX,EAX shellcode"),
+    (r"\\x31\\xdb", "XOR EBX,EBX shellcode"),
+    (r"\\x31\\xc9", "XOR ECX,ECX shellcode"),
+    (r"\\x31\\xd2", "XOR EDX,EDX shellcode"),
+    (r"\\x50\\x56", "PUSH EAX; PUSH ESI (shellcode)"),
+    (r"\\x68\\x01\\x01", "PUSH 0x0101 (shellcode)"),
+    (r"\\xcd\\x80", "INT 0x80 syscall (x86 Linux)"),
+    (r"\\x0f\\x05", "SYSCALL instruction (x64)"),
+    (r"\\xcc", "INT3 breakpoint"),
+
+    # --- PowerShell ---
     (r"powershell.*-enc\s+[A-Za-z0-9+/=]{20,}", "Encoded PowerShell command"),
     (r"powershell.*-w\s+hidden", "Hidden PowerShell window"),
-    (r"cmd\.exe\s+/c.*&&", "Chained CMD commands"),
-    (r"certutil.*-urlcache", "CertUtil download"),
-    (r"bitsadmin.*\/transfer", "BITSAdmin transfer"),
-    (r"reg\s+add.*\\Run", "Registry autorun entry"),
-    (r"schtasks.*\/create", "Scheduled task creation"),
-    (r"net\s+user\s+.*\/add", "User account creation"),
-    (r"wmic\s+process\s+call\s+create", "WMIC process creation"),
-    (r"mshta.*vbscript", "MSHTA VBScript execution"),
-    (r"regsvr32.*\/s.*\/i.*scrobj", "RegSvr32 scriptlet"),
-    (r"rundll32.*javascript:", "Rundll32 JavaScript"),
+    (r"powershell.*-nop", "No-profile PowerShell"),
+    (r"powershell.*-ExecutionPolicy\s+Bypass", "ExecutionPolicy bypass"),
+    (r"powershell.*IEX\s*\(", "PowerShell IEX (Invoke-Expression)"),
+    (r"powershell.*Invoke-Expression", "PowerShell Invoke-Expression"),
+    (r"powershell.*DownloadString", "PowerShell DownloadString"),
+    (r"powershell.*DownloadFile", "PowerShell DownloadFile"),
+    (r"powershell.*Net\.WebClient", "PowerShell WebClient download"),
+    (r"powershell.*Start-BitsTransfer", "PowerShell BITS transfer"),
+    (r"powershell.*-c\s+", "PowerShell inline command"),
+    (r"powershell.*-command\s+", "PowerShell -command execution"),
+    (r"pwsh.*-enc\s+[A-Za-z0-9+/=]{20,}", "Encoded pwsh command"),
+    (r"Invoke-WebRequest.*-OutFile", "Web file download"),
+    (r"Start-BitsTransfer.*-Source", "BITS file transfer"),
+    (r"Invoke-PowerShellTcp", "Nishang reverse shell"),
+    (r"Invoke-PowerShellIcmp", "Nishang ICMP shell"),
+    (r"Invoke-CredentialInjection", "Credential injection"),
+    (r"Invoke-PSRemoting", "PS Remoting exploitation"),
+
+    # --- Credential Access ---
     (r"mimikatz", "Mimikatz credential tool"),
     (r"sekurlsa::logonpasswords", "Mimikatz logon dump"),
+    (r"sekurlsa::wdigest", "Mimikatz wdigest dump"),
+    (r"sekurlsa::kerberos", "Mimikatz kerberos dump"),
     (r"kerberos::golden", "Golden Ticket attack"),
+    (r"kerberos::ptt", "Pass-the-Ticket"),
     (r"Invoke-Mimikatz", "PowerShell Mimikatz"),
     (r"Invoke-TokenManipulation", "Token manipulation"),
     (r"Get-GPPPassword", "GPP password extraction"),
     (r"Invoke-Kerberoast", "Kerberoasting"),
     (r"Invoke-DCShadow", "DCShadow attack"),
-    (r"Invoke-PowerShellTcp", "Nishang reverse shell"),
-    (r"Invoke-PowerShellIcmp", "Nishang ICMP shell"),
-    (r"Invoke-CredentialInjection", "Credential injection"),
-    (r"Invoke-PSRemoting", "PS Remoting exploitation"),
-    (r"New-Object.*Net\.Sockets\.TCPClient", "TCP reverse shell"),
-    (r"New-Object.*Net\.Sockets\.UDPClient", "UDP reverse shell"),
-    (r"\[System\.Net\.Sockets\]", "Raw .NET socket usage"),
-    (r"DownloadString.*http", "Remote code download"),
-    (r"DownloadFile.*http", "Remote file download"),
-    (r"Invoke-WebRequest.*-OutFile", "Web file download"),
-    (r"Start-BitsTransfer.*-Source", "BITS file transfer"),
+    (r"lsass\.dmp", "LSASS memory dump"),
+    (r"procdump.*lsass", "LSASS dump via procdump"),
+    (r"comsvcs\.dll.*MiniDump", "LSASS dump via comsvcs"),
+    (r"rundll32.*comsvcs", "LSASS dump via rundll32"),
+    (r"pypykatz", "Python mimikatz"),
+    (r"crackmapexec", "CrackMapExec"),
+
+    # --- Execution ---
+    (r"cmd\.exe\s+/c.*&&", "Chained CMD commands"),
+    (r"cmd\.exe\s+/c.*\|", "CMD pipe execution"),
+    (r"cmd\.exe\s+/c.*>", "CMD output redirect"),
+    (r"certutil.*-urlcache", "CertUtil download"),
+    (r"certutil.*-decode", "CertUtil decode"),
+    (r"bitsadmin.*\/transfer", "BITSAdmin transfer"),
+    (r"wmic\s+process\s+call\s+create", "WMIC process creation"),
+    (r"wmic\s+process\s+call\s+create.*powershell", "WMIC PowerShell spawn"),
+    (r"mshta.*vbscript", "MSHTA VBScript execution"),
+    (r"mshta.*http", "MSHTA remote execution"),
+    (r"regsvr32.*\/s.*\/i.*scrobj", "RegSvr32 scriptlet"),
+    (r"regsvr32.*\/s.*\/n.*\/u.*javascript:", "RegSvr32 JavaScript"),
+    (r"rundll32.*javascript:", "Rundll32 JavaScript"),
+    (r"rundll32.*url\.dll", "Rundll32 URL DLL"),
+    (r"rundll32.*comres\.dll", "Rundll32 COMres"),
+    (r"forfiles.*\/c.*cmd", "Forfiles CMD execution"),
+    (r"cmstp.*\/s", "CMSTP bypass"),
+    (r"installutil.*\/logfile", "InstallUtil execution"),
+    (r"msbuild.*\/t:", "MSBuild code execution"),
+    (r"regasm.*\/logfile", "RegAsm execution"),
+    (r"regsvcs.*\/logfile", "RegSvcs execution"),
+
+    # --- Persistence ---
+    (r"reg\s+add.*\\Run", "Registry autorun entry"),
+    (r"reg\s+add.*\\RunOnce", "Registry RunOnce entry"),
+    (r"reg\s+add.*\\CurrentVersion\\Run", "Registry Run key"),
+    (r"schtasks.*\/create", "Scheduled task creation"),
+    (r"at\s+\d+:\d+", "AT scheduled task"),
+    (r"sc\s+create", "Service creation"),
+    (r"New-Service", "PowerShell service creation"),
+    (r"StartupFolder", "Startup folder persistence"),
+    (r"\\\\Startup\\\\", "Startup folder path"),
+    (r"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run", "HKLM Run key"),
+    (r"HKCU\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run", "HKCU Run key"),
+
+    # --- Privilege Escalation ---
+    (r"sudo\s+chmod\s+[47]", "SUID/SGID binary creation"),
+    (r"chmod\s+[47]\d{2}\s+/bin/", "SUID shell"),
+    (r"chmod\s+u\+s", "Setuid bit"),
+    (r"net\s+localgroup\s+administrators", "Admin group modification"),
+    (r"net\s+user\s+.*\/add", "User account creation"),
+    (r"net\s+localgroup.*\/add", "Group membership change"),
+    (r"Set-ItemProperty.*RunAs", "RunAs persistence"),
+    (r"New-LocalUser", "Local user creation"),
+    (r"Add-LocalGroupMember", "Group member addition"),
+
+    # --- Defense Evasion ---
     (r"Add-MpPreference.*-ExclusionPath", "Windows Defender exclusion"),
     (r"Set-MpPreference.*-DisableRealtimeMonitoring", "Disabling Windows Defender"),
+    (r"Set-MpPreference.*-DisableBehaviorMonitoring", "Disabling behavior monitoring"),
+    (r"Set-MpPreference.*-DisableIOAVProtection", "Disabling IOAV protection"),
     (r"sc\s+stop\s+WinDefend", "Stopping Windows Defender"),
+    (r"sc\s+delete\s+WinDefend", "Deleting Windows Defender"),
     (r"bcdedit.*set.*recoveryenabled\s+no", "Disabling recovery"),
     (r"bcdedit.*set.*bootstatuspolicy.*ignoreallfailures", "Ignoring boot failures"),
     (r"vssadmin\s+delete\s+shadows", "Shadow copy deletion"),
     (r"wmic\s+shadowcopy\s+delete", "Shadow copy deletion via WMI"),
     (r"cipher\s+/w", "Wiping free space"),
     (r"wevtutil\s+cl", "Event log clearing"),
+    (r"Clear-EventLog", "PowerShell event log clear"),
+    (r"Remove-EventLog", "PowerShell event log removal"),
+    (r"timestomp", "Timestomping"),
+    (r"Set-MpPreference.*-ExclusionProcess", "Process exclusion"),
+    (r"unhook.*ntdll", "Unhooking ntdll"),
+    (r"EatHook", "EAT hooking"),
+    (r"IatHook", "IAT hooking"),
+
+    # --- Lateral Movement ---
+    (r"Invoke-WMIMethod.*Win32_Process.*Create", "WMI remote execution"),
+    (r"Invoke-Command.*-ComputerName", "PowerShell remoting"),
+    (r"psexec.*\\\\", "PsExec remote execution"),
+    (r"wmic.*\/node:.*process", "WMI remote process"),
+    (r"Enter-PSSession", "PowerShell remote session"),
+
+    # --- Data Exfiltration ---
+    (r"ftp.*-s:", "FTP staging"),
+    (r"tftp.*-i", "TFTP transfer"),
+    (r"curl.*-T\s+", "CURL upload"),
+    (r"wget.*--post", "WGET POST"),
+    (r"Invoke-RestMethod.*-Method\s+Post", "PowerShell HTTP POST"),
+    (r"Invoke-RestMethod.*-Uri.*\/api", "PowerShell API call"),
+    (r"Invoke-WebRequest.*-Method\s+Post", "PowerShell web POST"),
+
+    # --- C2 / RAT Indicators ---
+    (r"New-Object.*Net\.Sockets\.TCPClient", "TCP reverse shell"),
+    (r"New-Object.*Net\.Sockets\.UDPClient", "UDP reverse shell"),
+    (r"\[System\.Net\.Sockets\]", "Raw .NET socket usage"),
+    (r"System\.Net\.Sockets\.TcpClient", "TCP client creation"),
+    (r"System\.Net\.Sockets\.UdpClient", "UDP client creation"),
+    (r"System\.Net\.Sockets\.NetworkStream", "Network stream creation"),
+    (r"System\.IO\.StreamReader.*NetworkStream", "Reading from network stream"),
+    (r"System\.IO\.StreamWriter.*NetworkStream", "Writing to network stream"),
+    (r"Start-Process.*-WindowStyle\s+Hidden", "Hidden process launch"),
+    (r"Start-Process.*-NoNewWindow", "NoNewWindow process launch"),
+    (r"Add-Type.*-TypeDefinition.*DllImport", "P/Invoke DllImport"),
+    (r"VirtualAlloc", "VirtualAlloc (memory allocation)"),
+    (r"VirtualProtect", "VirtualProtect (memory protection change)"),
+    (r"CreateThread", "CreateThread (thread creation)"),
+    (r"RtlMoveMemory", "RtlMoveMemory (memory copy)"),
+    (r"WriteProcessMemory", "WriteProcessMemory (process injection)"),
+    (r"NtCreateThreadEx", "NtCreateThreadEx"),
+    (r"CreateRemoteThread", "CreateRemoteThread (process injection)"),
+    (r"QueueUserAPC", "QueueUserAPC (process injection)"),
+    (r"SetWindowsHookEx", "SetWindowsHookEx (keylogger)"),
+    (r"GetAsyncKeyState", "GetAsyncKeyState (keylogger)"),
+    (r"GetKeyState", "GetKeyState (keylogger)"),
+    (r"RegisterHotKey", "RegisterHotKey (hotkey capture)"),
+    (r"EnumWindows", "EnumWindows (window enumeration)"),
+    (r"GetForegroundWindow", "GetForegroundWindow (active window)"),
+    (r"GetWindowText", "GetWindowText (window text)"),
+    (r"CapCreateCaptureWindow", "Screen capture window"),
+    (r"BitBlt", "BitBlt (screen capture)"),
+    (r"CreateCompatibleBitmap", "Compatible bitmap creation"),
+    (r"GetDC", "GetDC (device context)"),
+    (r"OpenDesktop", "OpenDesktop (desktop access)"),
+    (r"EnumProcesses", "EnumProcesses"),
+    (r"OpenProcess", "OpenProcess"),
+    (r"ReadProcessMemory", "ReadProcessMemory"),
+    (r"IsDebuggerPresent", "Anti-debug check"),
+    (r"CheckRemoteDebuggerPresent", "Anti-debug check"),
+    (r"NtQueryInformationProcess", "Anti-debug check"),
+    (r"OutputDebugString", "Anti-debug check"),
+    (r"SleepEx", "Anti-sandbox SleepEx"),
+    (r"NtDelayExecution", "NtDelayExecution"),
+
+    # --- Linux specific ---
+    (r"\/bin\/sh\s+-c", "Shell execution"),
+    (r"\/bin\/bash\s+-c", "Bash execution"),
+    (r"\/bin\/dash\s+-c", "Dash execution"),
+    (r"\/tmp\/\.", "Hidden file in /tmp"),
+    (r"\/dev\/shm\/", "Shared memory abuse"),
+    (r"cron.*\*.*\*.*\/bin\/sh", "Cron persistence"),
+    (r"crontab.*-e", "Crontab editing"),
+    (r"\/etc\/crontab", "System crontab"),
+    (r"\/var\/spool\/cron", "User cron"),
+    (r"chmod\s+777", "World-writable permissions"),
+    (r"curl.*\|.*sh", "Pipe to shell (curl)"),
+    (r"curl.*\|.*bash", "Pipe to bash (curl)"),
+    (r"wget.*\|.*sh", "Pipe to shell (wget)"),
+    (r"wget.*\|.*bash", "Pipe to bash (wget)"),
+    (r"python.*-c.*socket", "Python socket execution"),
+    (r"python3.*-c.*socket", "Python3 socket execution"),
+    (r"perl.*-e.*socket", "Perl socket execution"),
+    (r"ruby.*-e.*socket", "Ruby socket execution"),
+
+    # --- Web shells ---
+    (r"eval\s*\(\$_(GET|POST|REQUEST|COOKIE)", "PHP web shell eval"),
+    (r"assert\s*\(\$_(GET|POST|REQUEST|COOKIE)", "PHP web shell assert"),
+    (r"base64_decode\s*\(\$_(GET|POST|REQUEST)", "PHP web shell base64"),
+    (r"shell_exec\s*\(\$_(GET|POST|REQUEST)", "PHP web shell exec"),
+    (r"passthru\s*\(\$_(GET|POST|REQUEST)", "PHP web shell passthru"),
+    (r"system\s*\(\$_(GET|POST|REQUEST)", "PHP web shell system"),
+    (r"proc_open\s*\(\$_(GET|POST|REQUEST)", "PHP web shell proc_open"),
+    (r"\$_(GET|POST|REQUEST)\[.*\]\s*\(\$_(GET|POST|REQUEST)", "PHP web shell function call"),
+    (r"JEE7NS4xMjM0", "Base64 web shell marker"),
+    (r"PD9waHA", "Base64 PHP open tag"),
+    (r"PD9wdXNo", "Base64 push tag"),
+    (r"<\?php.*eval.*base64_decode", "PHP webshell pattern"),
+    (r"aspx一句话", "ASPX webshell"),
+    (r"<%eval request", "ASP webshell"),
+    (r"<%@ Page Language", "ASPX page"),
+    (r"Runtime\.getRuntime\(\)\.exec", "Java runtime exec"),
+    (r"ProcessBuilder.*start", "Java ProcessBuilder"),
 ]
 
 # Known malicious IPs (subset of database for quick lookup)
@@ -597,7 +831,7 @@ def scan_file(file_path: str) -> FileScanResult:
     score = 0
     score += len(result.detected_families) * 25
     score += len(result.detected_signatures) * 10
-    score += len(result.suspicious_strings) * 15
+    score += len(result.suspicious_strings) * 5
     if result.entropy > 7.0:
         score += 10
     if result.entropy > 7.5:
@@ -606,8 +840,31 @@ def scan_file(file_path: str) -> FileScanResult:
         score += 5
     if result.embedded_ips:
         score += min(len(result.embedded_ips) * 2, 10)
-    if any(p in text_full.lower() for p in ["mimikatz", "sekurlsa", "kerberos::golden"]):
+
+    # Heavily weight certain high-confidence indicators
+    text_lower = " ".join(strings).lower()
+    if any(p in text_lower for p in ["mimikatz", "sekurlsa", "kerberos::golden"]):
         score += 30
+    if any(p in text_lower for p in ["reverse_tcp", "meterpreter", "bind_tcp"]):
+        score += 30
+    if any(p in text_lower for p in ["/dev/tcp/", "bash -i", "nc -e /bin/sh", "nc -e /bin/bash"]):
+        score += 25
+    if any(p in text_lower for p in ["virtualalloc", "virtualprotect", "writemem"]):
+        score += 20
+    if any(p in text_lower for p in ["schtasks.*create", "reg add.*\\\\run"]):
+        score += 15
+    if any(p in text_lower for p in ["disablerealtime", "stop windefend", "delete shadows"]):
+        score += 20
+    if any(p in text_lower for p in ["webshell", "webshell", "shell_exec($_", "eval($_"]):
+        score += 25
+
+    # Bonus for ELF/Linux malware indicators
+    if result.file_type == "ELF (Linux executable)":
+        elf_indicators = ["/bin/sh", "/bin/bash", "busybox", "mirai", "botnet", "wget.*sh", "curl.*sh"]
+        if any(ind in text_lower for ind in elf_indicators):
+            score += 20
+        if result.entropy > 6.5:
+            score += 5
 
     result.risk_score = min(score, 100)
 
