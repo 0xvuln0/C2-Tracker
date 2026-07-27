@@ -6,16 +6,37 @@ dist/
 build/
 *.egg
 .eggs/
-.env
-.env.*
-!.env.example
+
+# Virtual environments
 .venv/
 venv/
 env/
-*.log
+.env
+.env.*
+!.env.example
+
+# Runtime / local state
+.scanner_learn.json
+.online_iocs.json
+.cache/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
 .pytest_cache/
-.ruff_cache/
 .coverage
 htmlcov/
+.ruff_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Network captures
 *.pcap
 *.pcapng

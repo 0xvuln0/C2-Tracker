@@ -5,12 +5,9 @@
 [![CI](https://github.com/0xvuln0/C2-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/0xvuln0/C2-Tracker/actions)
 [![PyPI](https://img.shields.io/pypi/v/c2tracker.svg)](https://pypi.org/project/c2tracker/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](Dockerfile)
-[![YARA](https://img.shields.io/badge/YARA-Supported-orange)](yara_scanner.py)
 [![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 
 Network-based Command & Control (C2) server tracker. Monitors live network connections, enriches IPs via Shodan and Censys, scans files for malware, and detects known C2 frameworks.
-
-**Works on Linux, macOS, and Windows.**
 
 > Inspired by [montysecurity/C2-Tracker](https://github.com/montysecurity/C2-Tracker) for passive Shodan-based C2 hunting approach.
 
@@ -19,146 +16,111 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 | Feature | Description |
 |---------|-------------|
 | **Live network monitoring** | Track all inbound/outbound connections via `psutil` |
-| **Shodan enrichment** | Banners, open ports, vulnerabilities, OS, org info (cached) |
-| **Censys enrichment** | Services, protocols, autonomous system data (cached) |
-| **Malware IP database** | 950+ static IPs + auto-updating online IOCs from ThreatFox/URLhaus |
-| **File scanning** | Detect malware signatures, shellcode, reverse shells |
+| **Shodan/Censys enrichment** | Banners, ports, vulns, OS, org, ASN (locally cached) |
+| **Malware IP database** | 950+ static IPs + auto-updating IOCs from ThreatFox/URLhaus |
+| **File scanning** | Malware signatures, shellcode, reverse shells, 40+ families |
 | **YARA rules** | Built-in rules + custom rule support |
 | **MITRE ATT&CK** | Map detections to 30+ ATT&CK techniques |
-| **Binary analysis** | Detect raw shellcode, anti-debug, anti-VM, packing |
+| **Binary analysis** | Raw shellcode, anti-debug, anti-VM, packing detection |
 | **Self-learning** | Scanner improves with each scan |
 | **C2 Hunting** | Passive Shodan queries to find C2 infrastructure |
-| **Export** | JSON, CSV, and IOC export formats |
-| **Docker** | Ready-to-use Docker support |
-| **Threat scoring** | Configurable weighted scoring (edit `scoring.yaml`) |
+| **Export** | JSON, CSV, IOC output formats |
 | **Auto-update** | Pull latest IOCs from ThreatFox and URLhaus |
 | **Parallel scanning** | Multi-threaded bulk file scanning (`-j`) |
-| **Directory watch** | Auto-scan new/modified files in a directory |
+| **Directory watch** | Auto-scan new/modified files |
+| **Configurable scoring** | Edit `scoring.yaml` to tune risk weights |
+| **Docker** | Ready-to-use Docker support |
 
-## Quick Start
+---
 
-### 1. Install
+## Installation
 
-**From PyPI:**
+### Linux / macOS
+
 ```bash
 pip install c2tracker
 ```
 
-> On Parrot/Debian, if you get `externally-managed-environment`, use `--break-system-packages` or install in a venv:
-> ```bash
-> pip install c2tracker --break-system-packages
-> # or
-> python3 -m venv ~/venv && source ~/venv/bin/activate && pip install c2tracker
-> ```
->
-> On **macOS**: works out of the box. On **Windows**: run as Administrator for `scan` (network monitoring) to see all connections.
+On Parrot/Debian with `externally-managed-environment`:
+```bash
+pip install c2tracker --break-system-packages
+# or use a venv
+python3 -m venv ~/venv && source ~/venv/bin/activate && pip install c2tracker
+```
 
-**From source (for development):**
+### Windows
+
+```powershell
+# 1. Install Python from python.org (3.9+), check "Add Python to PATH"
+# 2. Open PowerShell and install
+pip install c2tracker
+# 3. Verify
+c2tracker --version
+```
+
+> **Windows note:** `scan` (network monitoring) requires running PowerShell as Administrator.
+
+### From source (development)
+
 ```bash
 git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
 ```
 
-### 2. Set up API keys (optional)
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your API keys:
-
-```
-SHODAN_API_KEY=your_key_here
-CENSYS_API_ID=your_id_here
-CENSYS_API_SECRET=your_secret_here
-```
-
-Get free API keys:
-- Shodan: https://account.shodan.io
-- Censys: https://search.censys.io/register
-
-> You can use the tool without API keys — it will use the built-in malware IP database and local network analysis.
-
 ### Upgrade
 
 ```bash
-pip install c2tracker --upgrade --break-system-packages
+pip install c2tracker --upgrade
 ```
 
-Or if using a venv:
+---
+
+## Quick Start
+
 ```bash
-source ~/venv/bin/activate && pip install c2tracker --upgrade
+# Scan a file
+c2tracker scan-file suspicious.exe
+
+# Scan with JSON output
+c2tracker scan-file -f json suspicious.exe
+
+# Check an IP against the threat database
+c2tracker check 45.77.65.114
+
+# Update IOC database from online feeds
+c2tracker update
 ```
 
-### Platform Notes
+---
 
-| Platform | `scan-file` | `scan` (network) | Notes |
-|----------|-------------|-------------------|-------|
-| **Linux** | Works | Requires `sudo` | Full connection + process visibility |
-| **macOS** | Works | Requires `sudo` | Some process names may differ |
-| **Windows** | Works | Run as Administrator | Use `c2tracker scan` in an elevated terminal |
-| **Docker** | Works | Use `--network host --pid host` | See docker-compose.yml for examples |
+## Commands
 
-### Docker
+### `scan-file` — Scan files for malware
 
 ```bash
-# Build
-docker build -t c2tracker .
+# Single file
+c2tracker scan-file suspicious.exe
 
-# Scan files
-docker run -v ./samples:/samples c2tracker scan-file /samples/*
+# Multiple files
+c2tracker scan-file -v sample1.exe sample2.dll
 
-# Scan network (needs host access)
-docker run --network host --pid host --privileged c2tracker scan --no-api
-```
+# Scan directory recursively
+c2tracker scan-file ./samples/
 
-## Usage
+# JSON output (for piping to jq, SIEM, etc.)
+c2tracker scan-file -f json suspicious.exe
 
-### Scan network connections
+# CSV output
+c2tracker scan-file -f csv *.exe
 
-```bash
-# Basic scan (requires sudo for live connection data)
-sudo python3 cli.py scan
+# IOC output (hashes, IPs, domains only)
+c2tracker scan-file -f ioc suspicious.exe
 
-# Show all connections with verbose output
-sudo python3 cli.py scan -s -v
+# Summary table
+c2tracker scan-file -f summary ./samples/
 
-# Continuous monitoring (check every 10 seconds)
-sudo python3 cli.py scan -m -i 10
-
-# Filter out private/internal IPs
-sudo python3 cli.py scan -f
-
-# Local-only scan (no API lookups)
-sudo python3 cli.py scan --no-api
-```
-
-### Scan files for malware
-
-```bash
-# Scan a single file
-python3 cli.py scan-file suspicious.exe
-
-# Scan multiple files with verbose output
-python3 cli.py scan-file -v sample1.exe sample2.dll
-
-# Scan a directory (recursive)
-python3 cli.py scan-file ./samples/
-
-# Output as JSON (pipe to jq, etc.)
-python3 cli.py scan-file -f json suspicious.exe | jq '.[].risk_label'
-
-# Output as CSV
-python3 cli.py scan-file -f csv *.exe
-
-# Output IOCs only (hashes, IPs, domains)
-python3 cli.py scan-file -f ioc suspicious.exe
-
-# Summary table (compact overview)
-python3 cli.py scan-file -f summary ./samples/
-
-# Parallel scanning with 4 workers
-python3 cli.py scan-file -j 4 ./samples/ -f summary
+# Parallel scanning (4 workers)
+c2tracker scan-file -j 4 ./samples/ -f summary
 ```
 
 The file scanner detects:
@@ -172,84 +134,188 @@ The file scanner detects:
 - **MITRE ATT&CK** — maps every detection to technique IDs
 - **YARA rules** — scans against built-in and custom rules
 
-### YARA scanning
+### `scan` — Monitor live network connections
 
 ```bash
-# Scan with built-in YARA rules
-python3 cli.py scan-file --yara suspicious.exe
+# Basic scan (requires sudo on Linux/macOS, Administrator on Windows)
+sudo c2tracker scan
 
-# Scan with custom rules directory
-python3 cli.py scan-file --yara-rules /path/to/rules suspicious.exe
+# Show all connections with verbose output
+sudo c2tracker scan -s -v
+
+# Continuous monitoring (every 10 seconds)
+sudo c2tracker scan -m -i 10
+
+# Filter out private/internal IPs
+sudo c2tracker scan -f
+
+# Local-only scan (no API lookups)
+sudo c2tracker scan --no-api
 ```
 
-### Update IOC database
+### `update` — Update IOC database
 
 ```bash
-# Auto-update from ThreatFox + URLhaus (runs if >24h since last update)
-python3 cli.py update
+# Auto-update from ThreatFox + URLhaus (runs if >24h since last)
+c2tracker update
 
 # Force update
-python3 cli.py update --force
+c2tracker update --force
 ```
 
-### Watch directory for new malware
+### `watch` — Watch directory for new malware
 
 ```bash
-# Watch a directory, scan new/modified files every 10 seconds
-python3 cli.py watch ./incoming/
+# Watch directory, scan new/modified files every 10 seconds
+c2tracker watch ./incoming/
 
 # Custom interval (5 seconds) with verbose output
-python3 cli.py watch -i 5 -v ./downloads/
+c2tracker watch -i 5 -v ./downloads/
 ```
 
-### Hunt C2 infrastructure via Shodan
+### `check` — Check IPs against threat database
 
 ```bash
-# Hunt all tracked C2 families (requires Shodan API key)
-python3 cli.py hunt
-
-# Hunt specific products only
-python3 cli.py hunt "Cobalt Strike" "Sliver" "AsyncRAT"
-
-# Verbose output
-python3 cli.py hunt -v
-
-# Custom output directory
-python3 cli.py hunt -o /tmp/c2data
+c2tracker check 45.77.65.114
+c2tracker check 45.77.65.114 185.56.83.83
 ```
 
-### Learning database
+### `family` / `actor` — Search threat database
 
 ```bash
-# View learning stats
-python3 cli.py learning
-
-# Reset learning database
-python3 cli.py learning --reset
+c2tracker family "cobalt strike"
+c2tracker actor "Evil Corp"
 ```
 
-### Check IPs against the threat database
+### `db` — Show database summary
 
 ```bash
-# Check one or more IPs
-python3 cli.py check 45.77.65.114
-python3 cli.py check 45.77.65.114 185.56.83.83
+c2tracker db
+c2tracker db --families --actors
 ```
 
-### Search the threat database
+### `hunt` — Hunt C2 infrastructure via Shodan
 
 ```bash
-# Search by malware family
-python3 cli.py family "cobalt strike"
-python3 cli.py family trickbot
-
-# Search by threat actor
-python3 cli.py actor "Evil Corp"
-python3 cli.py actor "Conti Group"
-
-# Show database summary
-python3 cli.py db --families --actors
+c2tracker hunt
+c2tracker hunt "Cobalt Strike" "Sliver" -v
 ```
+
+### `learning` — Learning database stats
+
+```bash
+c2tracker learning
+c2tracker learning --reset
+```
+
+---
+
+## Configuration
+
+### API keys (optional)
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```
+SHODAN_API_KEY=your_key_here
+CENSYS_API_ID=your_id_here
+CENSYS_API_SECRET=your_secret_here
+```
+
+Get free API keys:
+- Shodan: https://account.shodan.io
+- Censys: https://search.censys.io/register
+
+### Configurable scoring
+
+Edit `scoring.yaml` to customize risk score weights:
+
+```yaml
+scoring:
+  behavior_tiers:
+    15: 40    # 15+ behaviors → 40 pts
+    10: 30    # 10-14 → 30 pts
+     7: 22    # 7-9 → 22 pts
+  shellcode_per_hit: 2
+  anti_analysis_per_hit: 3
+  family_log_scale: 15
+  family_max: 20
+
+thresholds:
+  malicious: 70
+  suspicious: 40
+  low_risk: 20
+```
+
+Requires `pyyaml`: `pip install c2tracker[config]`
+
+### Platform Notes
+
+| Platform | `scan-file` | `scan` (network) | Notes |
+|----------|-------------|-------------------|-------|
+| **Linux** | Works | Requires `sudo` | Full connection + process visibility |
+| **macOS** | Works | Requires `sudo` | Some process names may differ |
+| **Windows** | Works | Run as Admin | Use elevated PowerShell for `scan` |
+| **Docker** | Works | Use `--network host` | See docker-compose.yml |
+
+---
+
+## Docker
+
+```bash
+# Build
+docker build -t c2tracker .
+
+# Scan files
+docker run -v ./samples:/samples c2tracker scan-file /samples/*
+
+# Scan network (needs host access)
+docker run --network host --pid host --privileged c2tracker scan --no-api
+```
+
+---
+
+## Repository Structure
+
+```
+C2-Tracker/
+├── cli.py              # CLI entry point (all commands)
+├── network.py          # Live connection monitoring (psutil)
+├── analyzer.py         # Threat scoring for network IPs
+├── file_scanner.py     # File malware analysis (signatures, shellcode, behavior)
+├── malware_db.py       # 950+ known malicious IPs
+├── db_updater.py       # Auto-update IOCs from ThreatFox/URLhaus
+├── api_cache.py        # Local cache for Shodan/Censys results
+├── shodan_lookup.py    # Shodan API enrichment
+├── censys_lookup.py    # Censys API enrichment
+├── hunter.py           # Passive C2 hunting via Shodan queries
+├── yara_scanner.py     # YARA rule scanning engine
+├── mitre_attack.py     # MITRE ATT&CK technique mapping
+├── export.py           # JSON/CSV/IOC export
+├── config.py           # .env configuration loader
+├── models.py           # Data models (ShodanResult, CensysResult)
+├── scoring.yaml        # Configurable risk score weights
+├── rules/              # Built-in YARA rules
+│   ├── malware.yar
+│   ├── webshells.yar
+│   └── shells.yar
+├── tests/              # Unit tests
+├── test_samples/       # Sample files for testing
+├── pyproject.toml      # Package config + dependencies
+├── requirements.txt    # pip install -r fallback
+├── Dockerfile          # Multi-stage Docker build
+├── docker-compose.yml  # Docker Compose services
+├── .env.example        # API key template
+├── .github/workflows/  # CI pipeline
+├── CHANGELOG.md        # Version history
+├── LICENSE             # MIT License
+└── README.md           # This file
+```
+
+---
 
 ## MITRE ATT&CK Mapping
 
@@ -271,34 +337,6 @@ Every detection is mapped to MITRE ATT&CK techniques:
 
 See [`mitre_attack.py`](mitre_attack.py) for the full mapping.
 
-## Configurable Scoring
-
-Edit `scoring.yaml` to customize risk score weights:
-
-```yaml
-scoring:
-  # More behaviors = higher score
-  behavior_tiers:
-    15: 40    # 15+ behaviors → 40 pts
-    10: 30    # 10-14 → 30 pts
-     7: 22    # 7-9 → 22 pts
-
-  # Per-indicator bonuses
-  shellcode_per_hit: 2
-  anti_analysis_per_hit: 3
-
-  # Family matches
-  family_log_scale: 15
-  family_max: 20
-
-thresholds:
-  malicious: 70
-  suspicious: 40
-  low_risk: 20
-```
-
-Requires `pyyaml`: `pip install c2tracker[config]`
-
 ## YARA Rules
 
 Built-in rules in `rules/`:
@@ -311,61 +349,18 @@ Built-in rules in `rules/`:
 
 Add your own `.yar` files to `rules/` and they'll be loaded automatically.
 
-## Architecture
-
-```
-c2tracker/
-  cli.py              # CLI entry point
-  network.py          # Network connection monitoring
-  analyzer.py         # Threat scoring engine
-  malware_db.py       # 1226 malicious IPs
-  shodan_lookup.py    # Shodan API integration
-  censys_lookup.py    # Censys API integration
-  hunter.py           # Passive C2 hunting via Shodan
-  file_scanner.py     # File-based malware analysis
-  yara_scanner.py     # YARA rule scanning
-  mitre_attack.py     # MITRE ATT&CK mapping
-  export.py           # JSON/CSV/IOC export
-  config.py           # Configuration management
-  models.py           # Data models
-  rules/              # YARA rules directory
-  test_samples/       # Sample malware for testing
-```
-
 ## C2 Frameworks Detected
 
-| Framework | Indicators |
-|-----------|-----------|
-| Cobalt Strike | Beacon artifacts, malleable C2 profiles, port 50050 |
-| Metasploit | Meterpreter payloads, reverse_tcp/shells |
-| Sliver | Sliver-specific ports and service names |
-| Havoc | Demon implants |
-| Brute Ratel | Badger payloads |
-| Mythic | Athena/apfell agents |
-| Covenant | Grunt implants |
-| Empire | PowerShell Empire artifacts |
-| PoshC2 | PoshC2-specific markers |
-| AsyncRAT | AsyncRAT-specific C2 channels |
-| njRAT | njRAT C2 ports |
-| Remcos | Remcos C2 infrastructure |
-| Agent Tesla | Agent Tesla exfil servers |
-| TrickBot | TrickBot C2 panels |
-| Emotet | Emotet Epoch 4 C2 |
-| Conti | Conti ransomware C2 |
-| LockBit | LockBit ransomware C2 |
-| REvil | REvil/Sodinokibi C2 |
-| QakBot | QakBot C2 servers |
-| RedLine | RedLine stealer C2 |
-| Lumma | Lumma stealer C2 |
-| Pikabot | Pikabot C2 |
+Cobalt Strike, Metasploit, Sliver, Havoc, Brute Ratel, Mythic, Covenant, Empire, PoshC2, AsyncRAT, njRAT, Remcos, Agent Tesla, TrickBot, Emotet, Conti, LockBit, REvil, QakBot, RedLine, Lumma, Pikabot, and more.
 
 ## Requirements
 
 - Python 3.9+
-- Root/sudo access (for live network monitoring via `scan`)
-- (Optional) Shodan API key — free tier available (required for `hunt`)
+- Root/sudo access (Linux/macOS) or Administrator (Windows) for `scan`
+- (Optional) Shodan API key — free tier available
 - (Optional) Censys API key — free tier available
-- (Optional) `yara-python` for YARA rule scanning
+- (Optional) `yara-python` for YARA rule scanning (`pip install c2tracker[yara]`)
+- (Optional) `pyyaml` for configurable scoring (`pip install c2tracker[config]`)
 
 ## Contributing
 
