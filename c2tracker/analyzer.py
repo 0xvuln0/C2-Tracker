@@ -3,9 +3,25 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from c2tracker.censys_lookup import CensysResult
-from c2tracker.malware_db import MalwareIP, check_ip, search_actor, search_family
+from c2tracker.malware_db import MalwareIP, check_ip
 from c2tracker.network import Connection
 from c2tracker.shodan_lookup import ShodanResult
+
+# Scoring weights — each detection source contributes a weighted amount
+SCORE_FRAMEWORK_DETECTED = 30
+SCORE_INDICATOR = 10
+SCORE_PORT_MATCH = 5
+SCORE_DB_MATCH_UNIT = 20
+SCORE_DB_MATCH_CAP = 40
+SCORE_VULN_UNIT = 3
+SCORE_SHODAN_SUSPECT = 25
+SCORE_CENSYS_SUSPECT = 25
+SCORE_MAX = 100
+
+# Threat level thresholds
+THRESHOLD_CRITICAL = 70
+THRESHOLD_HIGH = 50
+THRESHOLD_MEDIUM = 25
 
 KNOWN_C2_FRAMEWORKS: dict[str, list[str]] = {
     "Cobalt Strike": [
@@ -24,7 +40,7 @@ KNOWN_C2_FRAMEWORKS: dict[str, list[str]] = {
         "covenant", "grunt", "covenantframework",
     ],
     "Brute Ratel": [
-        "brute ratel", "bruteratel", "badger", "covenant",
+        "brute ratel", "bruteratel", "badger",
     ],
     "Havoc": [
         "havoc", "havoc-c2", "demon",
@@ -36,13 +52,10 @@ KNOWN_C2_FRAMEWORKS: dict[str, list[str]] = {
         "empire", "empire-c2", "powershell-empire",
     ],
     "PoshC2": [
-        "poshc2", "posh", "posh-c2",
+        "poshc2", "posh-c2",
     ],
     "Decaf": [
         "decaf", "decaf-c2",
-    ],
-    "C2Lite": [
-        "c2lite", "c2-lite",
     ],
 }
 
@@ -60,16 +73,26 @@ C2_PORT_INDICATORS: dict[int, str] = {
     8888: "Common C2",
 }
 
-SUSPICIOUS_EXTENSIONS = [
-    ".exe", ".dll", ".sys", ".bin", ".ps1", ".bat", ".cmd",
-    ".vbs", ".js", ".hta", ".scr", ".com", ".pif",
-]
-
 
 @dataclass
 class ThreatResult:
+    """Aggregated threat assessment for a single IP address.
+
+    Combines data from the malware database, Shodan, Censys, and
+    live connection analysis into a single scored result.
+
+    Attributes:
+        ip: The assessed IP address.
+        detected_frameworks: C2 framework names identified from all sources.
+        indicators: Human-readable explanation of why this IP was flagged.
+        associated_ports: Open ports found via Shodan (capped at 10).
+        malware_db_matches: Direct hits from the local threat database.
+        shodan_result: Raw Shodan lookup data (if available).
+        censys_result: Raw Censys lookup data (if available).
+        connections: Active network connections to this IP.
+    """
+
     ip: str
-    threat_level: str = "low"
     detected_frameworks: list[str] = field(default_factory=list)
     indicators: list[str] = field(default_factory=list)
     associated_ports: list[int] = field(default_factory=list)
@@ -80,40 +103,50 @@ class ThreatResult:
 
     @property
     def score(self) -> int:
+        """Compute a 0-100 threat score from all detection signals."""
         score = 0
-        score += len(self.detected_frameworks) * 30
-        score += len(self.indicators) * 10
-        score += len(self.associated_ports) * 5
+        score += len(self.detected_frameworks) * SCORE_FRAMEWORK_DETECTED
+        score += len(self.indicators) * SCORE_INDICATOR
+        score += len(self.associated_ports) * SCORE_PORT_MATCH
         if self.malware_db_matches:
-            score += min(len(self.malware_db_matches) * 20, 40)
+            score += min(len(self.malware_db_matches) * SCORE_DB_MATCH_UNIT, SCORE_DB_MATCH_CAP)
         if self.shodan_result and self.shodan_result.vulns:
-            score += len(self.shodan_result.vulns) * 3
+            score += len(self.shodan_result.vulns) * SCORE_VULN_UNIT
         if self.shodan_result and self.shodan_result.is_c2_suspect:
-            score += 25
+            score += SCORE_SHODAN_SUSPECT
         if self.censys_result and self.censys_result.is_c2_suspect:
-            score += 25
-        return min(score, 100)
+            score += SCORE_CENSYS_SUSPECT
+        return min(score, SCORE_MAX)
 
     @property
     def threat_label(self) -> str:
+        """Map the numeric score to a human-readable threat level."""
         s = self.score
-        if s >= 70:
+        if s >= THRESHOLD_CRITICAL:
             return "CRITICAL"
-        if s >= 50:
+        if s >= THRESHOLD_HIGH:
             return "HIGH"
-        if s >= 25:
+        if s >= THRESHOLD_MEDIUM:
             return "MEDIUM"
         return "LOW"
 
 
 def analyze_shodan_banners(result: ShodanResult) -> list[str]:
-    indicators = []
+    """Scan Shodan banners for known C2 framework keywords.
+
+    Args:
+        result: ShodanResult containing banner data.
+
+    Returns:
+        List of detected framework names (e.g. ["Cobalt Strike"]).
+    """
+    indicators: list[str] = []
     for banner in result.banners:
         product = (banner.get("product") or "").lower()
         data = (banner.get("data") or "").lower()
-        _http_body = (banner.get("http", {}).get("body", "") or "").lower()
+        http_body = (banner.get("http", {}).get("body", "") or "").lower()
 
-        all_text = f"{product} {data} {_http_body}"
+        all_text = f"{product} {data} {http_body}"
 
         for framework, keywords in KNOWN_C2_FRAMEWORKS.items():
             for kw in keywords:
@@ -124,7 +157,15 @@ def analyze_shodan_banners(result: ShodanResult) -> list[str]:
 
 
 def analyze_censys_services(result: CensysResult) -> list[str]:
-    indicators = []
+    """Scan Censys service entries for known C2 framework keywords.
+
+    Args:
+        result: CensysResult containing service data.
+
+    Returns:
+        List of detected framework names (e.g. ["Sliver"]).
+    """
+    indicators: list[str] = []
     for svc in result.services:
         svc_text = " ".join(str(v) for v in svc.values()).lower()
         for framework, keywords in KNOWN_C2_FRAMEWORKS.items():
@@ -135,7 +176,15 @@ def analyze_censys_services(result: CensysResult) -> list[str]:
 
 
 def analyze_connection_ports(connections: list[Connection]) -> list[str]:
-    indicators = []
+    """Check connection ports against known C2 port indicators.
+
+    Args:
+        connections: List of active Connection objects.
+
+    Returns:
+        List of framework/indicator names for matching ports.
+    """
+    indicators: list[str] = []
     for conn in connections:
         if conn.remote_port in C2_PORT_INDICATORS:
             framework = C2_PORT_INDICATORS[conn.remote_port]
@@ -150,6 +199,20 @@ def analyze_threat(
     censys_result: CensysResult | None = None,
     connections: list[Connection] | None = None,
 ) -> ThreatResult:
+    """Perform a full threat assessment on an IP address.
+
+    Combines the local malware database, Shodan banners, Censys services,
+    and active connection ports to produce a scored ThreatResult.
+
+    Args:
+        ip: IPv4 address to assess.
+        shodan_result: Optional Shodan enrichment data.
+        censys_result: Optional Censys enrichment data.
+        connections: Optional list of active connections to this IP.
+
+    Returns:
+        ThreatResult with score, threat label, and all indicators.
+    """
     result = ThreatResult(
         ip=ip,
         shodan_result=shodan_result,
@@ -157,6 +220,7 @@ def analyze_threat(
         connections=connections or [],
     )
 
+    # Check local threat database
     db_matches = check_ip(ip)
     if db_matches:
         result.malware_db_matches = db_matches
@@ -165,39 +229,52 @@ def analyze_threat(
         result.indicators.append(
             f"KNOWN MALICIOUS: Matched {len(db_matches)} record(s) in threat database"
         )
-        result.indicators.append(
-            f"Malware families: {', '.join(families)}"
-        )
+        result.indicators.append(f"Malware families: {', '.join(families)}")
         if actors:
             result.indicators.append(f"Threat actors: {', '.join(actors)}")
         for m in db_matches:
             if m.malware_family not in result.detected_frameworks:
                 result.detected_frameworks.append(m.malware_family)
 
+    # Shodan banner analysis
     if shodan_result and not shodan_result.error:
         shodan_indicators = analyze_shodan_banners(shodan_result)
         result.detected_frameworks.extend(shodan_indicators)
 
+    # Censys service analysis
     if censys_result and not censys_result.error:
         censys_indicators = analyze_censys_services(censys_result)
         for fw in censys_indicators:
             if fw not in result.detected_frameworks:
                 result.detected_frameworks.append(fw)
 
+    # Port-based indicators
     if connections:
         port_indicators = analyze_connection_ports(connections)
         for fw in port_indicators:
             if fw not in result.detected_frameworks:
                 result.detected_frameworks.append(fw)
             if fw not in result.indicators:
-                result.indicators.append(f"Port {next(c.remote_port for c in connections if C2_PORT_INDICATORS.get(c.remote_port) == fw)} associated with {fw}")
+                matching_port = next(
+                    c.remote_port for c in connections
+                    if C2_PORT_INDICATORS.get(c.remote_port) == fw
+                )
+                result.indicators.append(
+                    f"Port {matching_port} associated with {fw}"
+                )
 
+    # Shodan vulnerability and port enrichment
     if shodan_result and not shodan_result.error:
         if shodan_result.vulns:
-            result.indicators.append(f"{len(shodan_result.vulns)} known vulnerabilities found")
+            result.indicators.append(
+                f"{len(shodan_result.vulns)} known vulnerabilities found"
+            )
         result.associated_ports = shodan_result.ports[:10]
 
+    # Prepend framework summary
     if result.detected_frameworks:
-        result.indicators.insert(0, f"C2 frameworks detected: {', '.join(result.detected_frameworks)}")
+        result.indicators.insert(
+            0, f"C2 frameworks detected: {', '.join(result.detected_frameworks)}"
+        )
 
     return result

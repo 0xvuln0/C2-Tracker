@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 from dataclasses import dataclass, field
 
 import shodan
@@ -7,6 +8,22 @@ import shodan
 
 @dataclass
 class ShodanResult:
+    """Result of a Shodan IP lookup.
+
+    Attributes:
+        ip: The queried IP address.
+        ports: Open ports discovered.
+        hostnames: DNS hostnames associated with the IP.
+        os: Detected operating system.
+        org: Organization owning the IP.
+        isp: Internet service provider.
+        country: Country name.
+        city: City name.
+        banners: Raw banner data from Shodan services.
+        vulns: Known CVE identifiers.
+        error: Error message if the lookup failed, None otherwise.
+    """
+
     ip: str
     ports: list[int] = field(default_factory=list)
     hostnames: list[str] = field(default_factory=list)
@@ -21,14 +38,18 @@ class ShodanResult:
 
     @property
     def is_c2_suspect(self) -> bool:
+        """Check if banners contain known C2 framework indicators.
+
+        Returns True if any banner matches known C2 tooling signatures.
+        """
         c2_indicators = [
-            "cobalt", "cobaltstrike", "metasploit", "meterpreter",
-            "covenant", "sliver", "brute ratel", "havoc", "decaf",
-            "mythic", "empire", "poshc2", "dns", "https", "http",
+            "cobalt", "cobaltstrike", "beacon", "malleable",
+            "metasploit", "meterpreter", "covenant", "grunt",
+            "sliver", "brute ratel", "bruteratel", "badger",
+            "havoc", "demon", "decaf", "mythic", "apfell",
+            "empire", "powershell-empire", "poshc2",
         ]
-        banner_text = " ".join(
-            str(b) for b in self.banners
-        ).lower()
+        banner_text = " ".join(str(b) for b in self.banners).lower()
         return any(ind in banner_text for ind in c2_indicators)
 
     def __str__(self) -> str:
@@ -47,10 +68,25 @@ class ShodanResult:
 
 
 def lookup_ip(api_key: str, ip: str) -> ShodanResult:
+    """Look up an IP address via the Shodan API.
+
+    Args:
+        api_key: Shodan API key. If empty, returns an error result.
+        ip: IPv4 address to look up.
+
+    Returns:
+        ShodanResult with enriched data or an error message.
+    """
     result = ShodanResult(ip=ip)
 
     if not api_key:
         result.error = "Shodan API key not configured"
+        return result
+
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        result.error = f"Invalid IP address: {ip}"
         return result
 
     try:
@@ -65,7 +101,8 @@ def lookup_ip(api_key: str, ip: str) -> ShodanResult:
         result.country = host.get("country_name")
         result.city = host.get("city")
         result.banners = host.get("data", [])
-        result.vulns = list(host.get("vulns", {}).keys()) if isinstance(host.get("vulns"), dict) else list(host.get("vulns", []))
+        vulns = host.get("vulns", {})
+        result.vulns = list(vulns.keys()) if isinstance(vulns, dict) else list(vulns)
 
     except shodan.APIError as e:
         result.error = f"Shodan API error: {e}"

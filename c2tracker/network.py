@@ -1,3 +1,9 @@
+"""Live network connection monitoring and IP classification.
+
+Uses psutil to enumerate active TCP/UDP connections and provides
+utilities for filtering private IPs and resolving process names.
+"""
+
 from __future__ import annotations
 
 import socket
@@ -8,6 +14,18 @@ import psutil
 
 @dataclass
 class Connection:
+    """A single network connection observed on the local machine.
+
+    Attributes:
+        local_addr: Local IP address.
+        local_port: Local port number.
+        remote_addr: Remote IP address.
+        remote_port: Remote port number.
+        status: Connection state (e.g. ESTABLISHED, TIME_WAIT).
+        pid: OS process ID owning the connection, or None.
+        process_name: Name of the owning process, or None.
+    """
+
     local_addr: str
     local_port: int
     remote_addr: str
@@ -18,6 +36,7 @@ class Connection:
 
     @property
     def remote_ip(self) -> str:
+        """Alias for remote_addr for clarity in filtering."""
         return self.remote_addr
 
     def __str__(self) -> str:
@@ -30,6 +49,10 @@ class Connection:
 
 
 def _resolve_process(pid: int) -> str | None:
+    """Look up the process name for a given PID.
+
+    Returns None if the process no longer exists or access is denied.
+    """
     try:
         proc = psutil.Process(pid)
         return proc.name()
@@ -38,8 +61,16 @@ def _resolve_process(pid: int) -> str | None:
 
 
 def get_connections() -> list[Connection]:
-    connections = []
-    seen = set()
+    """Enumerate all active inbound/outbound network connections.
+
+    Filters out loopback addresses and deduplicates connections.
+    Requires root/sudo for full visibility on most systems.
+
+    Returns:
+        List of Connection objects for all active external connections.
+    """
+    connections: list[Connection] = []
+    seen: set[tuple[str, int, str, int]] = set()
 
     for conn in psutil.net_connections(kind="inet"):
         if conn.raddr is None:
@@ -70,8 +101,13 @@ def get_connections() -> list[Connection]:
 
 
 def get_unique_remote_ips() -> list[str]:
-    seen = set()
-    ips = []
+    """Return deduplicated list of remote IPs from active connections.
+
+    Returns:
+        List of unique remote IP address strings.
+    """
+    seen: set[str] = set()
+    ips: list[str] = []
     for conn in get_connections():
         if conn.remote_ip not in seen:
             seen.add(conn.remote_ip)
@@ -80,6 +116,16 @@ def get_unique_remote_ips() -> list[str]:
 
 
 def is_private_ip(ip: str) -> bool:
+    """Check if an IP address is in a private/reserved range.
+
+    Checks RFC 1918 (10.x, 172.16-31.x, 192.168.x) and loopback (127.x).
+
+    Args:
+        ip: IPv4 address string.
+
+    Returns:
+        True if the IP is private/reserved, False otherwise.
+    """
     try:
         addr = socket.inet_aton(ip)
         first_octet = addr[0]
