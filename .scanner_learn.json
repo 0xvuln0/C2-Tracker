@@ -1,31 +1,56 @@
 {
-  "scans": 2,
-  "malicious": 2,
+  "scans": 9,
+  "malicious": 8,
   "families": {
     "Linux Reverse Shell": {
-      "count": 2,
+      "count": 6,
       "ips": [],
       "domains": []
     },
     "Reverse Shell C2": {
-      "count": 2,
+      "count": 6,
       "ips": [],
       "domains": []
     },
     "Mirai Botnet": {
-      "count": 2,
+      "count": 8,
       "ips": [],
       "domains": []
     },
     "Netcat Reverse Shell": {
-      "count": 2,
+      "count": 6,
+      "ips": [],
+      "domains": []
+    },
+    "Cobalt Strike": {
+      "count": 1,
+      "ips": [],
+      "domains": []
+    },
+    "Metasploit": {
+      "count": 1,
+      "ips": [],
+      "domains": []
+    },
+    "Sliver": {
+      "count": 1,
+      "ips": [],
+      "domains": []
+    },
+    "Conti": {
+      "count": 1,
+      "ips": [],
+      "domains": []
+    },
+    "Mozi Botnet": {
+      "count": 1,
       "ips": [],
       "domains": []
     }
   },
   "byte_patterns": {
     "4889d64d31c96a22": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -35,7 +60,7 @@
       "first_seen": 1785117556.026308
     },
     "31c96a22415a6a07": {
-      "count": 2,
+      "count": 6,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -45,7 +70,7 @@
       "first_seen": 1785117556.026368
     },
     "415a6a075a0f0548": {
-      "count": 2,
+      "count": 6,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -55,7 +80,7 @@
       "first_seen": 1785117556.0263898
     },
     "5a0f054885c07851": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -65,7 +90,7 @@
       "first_seen": 1785117556.026408
     },
     "6a0a4159506a2958": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -75,7 +100,7 @@
       "first_seen": 1785117556.026453
     },
     "506a2958996a025f": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -85,7 +110,7 @@
       "first_seen": 1785117556.0264776
     },
     "6a015e0f054885c0": {
-      "count": 2,
+      "count": 6,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -95,7 +120,7 @@
       "first_seen": 1785117556.0271485
     },
     "89e66a105a6a2a58": {
-      "count": 2,
+      "count": 6,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -105,7 +130,7 @@
       "first_seen": 1785117556.0272667
     },
     "5a6a2a580f055948": {
-      "count": 2,
+      "count": 6,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -115,7 +140,7 @@
       "first_seen": 1785117556.0272858
     },
     "0f05594885c07925": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -125,7 +150,7 @@
       "first_seen": 1785117556.0273013
     },
     "4831f60f0559595f": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -135,7 +160,7 @@
       "first_seen": 1785117556.0273983
     },
     "6a015f0f055e6a7e": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -145,7 +170,7 @@
       "first_seen": 1785117556.0274622
     },
     "055e6a7e5a0f0548": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -155,7 +180,7 @@
       "first_seen": 1785117556.0274763
     },
     "5a0f054885c078ed": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -165,7 +190,7 @@
       "first_seen": 1785117556.0274894
     },
     "4889d64531c96a22": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -175,7 +200,7 @@
       "first_seen": 1785117556.2221656
     },
     "5a0f054885c07850": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -185,7 +210,7 @@
       "first_seen": 1785117556.222245
     },
     "506a0a41596a2958": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -195,7 +220,7 @@
       "first_seen": 1785117556.2223036
     },
     "596a2958996a025f": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -205,7 +230,7 @@
       "first_seen": 1785117556.2223346
     },
     "0f05594885c07924": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -215,7 +240,7 @@
       "first_seen": 1785117556.2225578
     },
     "054889e731f60f05": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -225,7 +250,7 @@
       "first_seen": 1785117556.2226505
     },
     "31f60f0559595f48": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -235,7 +260,7 @@
       "first_seen": 1785117556.2226734
     },
     "6a3c586a015f0f05": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -245,7 +270,7 @@
       "first_seen": 1785117556.2227337
     },
     "015f0f055e6a7e5a": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -255,7 +280,7 @@
       "first_seen": 1785117556.2227602
     },
     "5e6a7e5a31c00f05": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -265,7 +290,7 @@
       "first_seen": 1785117556.2227793
     },
     "31c00f054885c078": {
-      "count": 1,
+      "count": 3,
       "families": [
         "Linux Reverse Shell",
         "Reverse Shell C2",
@@ -273,11 +298,260 @@
         "Netcat Reverse Shell"
       ],
       "first_seen": 1785117556.2227974
+    },
+    "20cbb431c9ebb760": {
+      "count": 1,
+      "families": [
+        "Mirai Botnet"
+      ],
+      "first_seen": 1785158897.879143
     }
   },
-  "ips_seen": {},
+  "ips_seen": {
+    "100.66.41.99": 1
+  },
   "domains_seen": {
-    "note.gnu": 1
+    "note.gnu": 3,
+    "algorithms.aes": 1,
+    "api.ipify": 1,
+    "bmp.save": 1,
+    "bounds.height": 1,
+    "bounds.location": 1,
+    "bounds.size": 1,
+    "bounds.width": 1,
+    "buf.getvalue": 1,
+    "buf.tobytes": 1,
+    "c.split": 1,
+    "cam.isopened": 1,
+    "cam.read": 1,
+    "cam.release": 1,
+    "cam.set": 1,
+    "cert.get": 1,
+    "cipher.decryptor": 1,
+    "cipher.encryptor": 1,
+    "client.close": 1,
+    "client.recv": 1,
+    "client.send": 1,
+    "cmd.lower": 1,
+    "cmd.replace": 1,
+    "cmd.split": 1,
+    "com.system": 1,
+    "command.strip": 1,
+    "content.count": 1,
+    "content.split": 1,
+    "cryptography.hazmat": 1,
+    "ctypes.cdll": 1,
+    "ctypes.memmove": 1,
+    "ctypes.windll": 1,
+    "cv2.imencode": 1,
+    "cv2.videocapture": 1,
+    "data.encode": 1,
+    "data.get": 1,
+    "data.items": 1,
+    "datetime.fromtimestamp": 1,
+    "datetime.now": 1,
+    "decryptor.finalize": 1,
+    "decryptor.update": 1,
+    "disk.percent": 1,
+    "disk.total": 1,
+    "disk.used": 1,
+    "dispatchers.items": 1,
+    "docker.sock": 1,
+    "dst.close": 1,
+    "dst.sendall": 1,
+    "e.output": 1,
+    "encryptor.finalize": 1,
+    "encryptor.update": 1,
+    "entry.encode": 1,
+    "exts.get": 1,
+    "f.endswith": 1,
+    "f.lower": 1,
+    "f.read": 1,
+    "f.readlines": 1,
+    "f.startswith": 1,
+    "f.write": 1,
+    "filename.lower": 1,
+    "filename.strip": 1,
+    "forms.screen": 1,
+    "getpass.getuser": 1,
+    "gfx.copyfromscreen": 1,
+    "helper.plist": 1,
+    "hw.model": 1,
+    "image.new": 1,
+    "imagegrab.grab": 1,
+    "img.save": 1,
+    "importlib.util": 1,
+    "indicators.append": 1,
+    "info.get": 1,
+    "io.bytesio": 1,
+    "issuer.get": 1,
+    "jmod.dumps": 1,
+    "jmod.loads": 1,
+    "json.dump": 1,
+    "json.dumps": 1,
+    "json.loads": 1,
+    "k.lower": 1,
+    "kernel32.globalalloc": 1,
+    "kernel32.globallock": 1,
+    "kernel32.globalunlock": 1,
+    "kernel32.isdebuggerpresent": 1,
+    "key.backspace": 1,
+    "key.char": 1,
+    "key.delete": 1,
+    "key.encode": 1,
+    "key.enter": 1,
+    "key.esc": 1,
+    "key.lower": 1,
+    "key.name": 1,
+    "key.shift": 1,
+    "key.space": 1,
+    "key.startswith": 1,
+    "key.tab": 1,
+    "keyboard.listener": 1,
+    "kw.lower": 1,
+    "libc.so": 1,
+    "line.split": 1,
+    "line.startswith": 1,
+    "line.strip": 1,
+    "lines.append": 1,
+    "lower.startswith": 1,
+    "md5.hexdigest": 1,
+    "md5.update": 1,
+    "mem.percent": 1,
+    "mem.total": 1,
+    "mem.used": 1,
+    "memdump.bin": 1,
+    "methods.append": 1,
+    "mod.run": 1,
+    "modes.cbc": 1,
+    "modules.append": 1,
+    "multi-user.target": 1,
+    "network.target": 1,
+    "os.chdir": 1,
+    "os.environ": 1,
+    "os.fork": 1,
+    "os.getcwd": 1,
+    "os.getenv": 1,
+    "os.geteuid": 1,
+    "os.getloadavg": 1,
+    "os.getlogin": 1,
+    "os.getpid": 1,
+    "os.kill": 1,
+    "os.listdir": 1,
+    "os.makedirs": 1,
+    "os.path": 1,
+    "os.remove": 1,
+    "os.rmdir": 1,
+    "os.setsid": 1,
+    "os.urandom": 1,
+    "os.walk": 1,
+    "out.lower": 1,
+    "p.communicate": 1,
+    "p.returncode": 1,
+    "padded.encode": 1,
+    "part.split": 1,
+    "part.startswith": 1,
+    "part.strip": 1,
+    "parts.append": 1,
+    "paths.items": 1,
+    "platform.machine": 1,
+    "platform.node": 1,
+    "platform.platform": 1,
+    "platform.release": 1,
+    "platform.system": 1,
+    "platform.version": 1,
+    "ports.append": 1,
+    "ports.extend": 1,
+    "primitives.ciphers": 1,
+    "proc.communicate": 1,
+    "profile.strip": 1,
+    "profiles.split": 1,
+    "pynput.keyboard": 1,
+    "rc.local": 1,
+    "resolv.conf": 1,
+    "rest.split": 1,
+    "result.returncode": 1,
+    "result.stdout": 1,
+    "results.append": 1,
+    "s.close": 1,
+    "s.connect": 1,
+    "s.getpeercert": 1,
+    "s.read": 1,
+    "s.settimeout": 1,
+    "sam.hiv": 1,
+    "screenshot.png": 1,
+    "services.get": 1,
+    "sha1.hexdigest": 1,
+    "sha1.update": 1,
+    "sha256.hexdigest": 1,
+    "sha256.update": 1,
+    "shell32.isuseranadmin": 1,
+    "shutil.move": 1,
+    "sock.close": 1,
+    "sock.connect": 1,
+    "sock.recv": 1,
+    "sock.sendall": 1,
+    "sock.settimeout": 1,
+    "socket.gethostbyname": 1,
+    "socket.gethostname": 1,
+    "socket.socket": 1,
+    "socket.timeout": 1,
+    "spec.loader": 1,
+    "spec.split": 1,
+    "src.close": 1,
+    "src.recv": 1,
+    "srv.accept": 1,
+    "srv.bind": 1,
+    "srv.close": 1,
+    "srv.listen": 1,
+    "srv.setsockopt": 1,
+    "srv.settimeout": 1,
+    "status.split": 1,
+    "struct.pack": 1,
+    "struct.unpack": 1,
+    "subject.get": 1,
+    "subprocess.calledprocesserror": 1,
+    "subprocess.devnull": 1,
+    "subprocess.pipe": 1,
+    "subprocess.popen": 1,
+    "subprocess.run": 1,
+    "subprocess.stdout": 1,
+    "subprocess.timeoutexpired": 1,
+    "sys-helper.service": 1,
+    "sys.argv": 1,
+    "sys.executable": 1,
+    "sys.stderr": 1,
+    "system.drawing": 1,
+    "system.hiv": 1,
+    "system.web": 1,
+    "system.windows": 1,
+    "t.start": 1,
+    "text.encode": 1,
+    "threading.thread": 1,
+    "time.sleep": 1,
+    "time.time": 1,
+    "types.items": 1,
+    "urllib.error": 1,
+    "urllib.request": 1,
+    "user32.closeclipboard": 1,
+    "user32.emptyclipboard": 1,
+    "user32.getclipboarddata": 1,
+    "user32.openclipboard": 1,
+    "user32.setclipboarddata": 1,
+    "uuid.getnode": 1,
+    "wifi-sec.psk": 1,
+    "www.apple": 1,
+    "androidmanifest.xml": 1,
+    "androidmanifest.xmlpk": 1,
+    "classes.dex": 1,
+    "classes.dexpk": 1,
+    "manifest.mf": 1,
+    "manifest.mfpk": 1,
+    "resources.arsccb": 1,
+    "resources.arscpk": 1,
+    "signfile.rsapk": 1,
+    "signfile.sf": 1,
+    "signfile.sfpk": 1
   },
   "hashes": {
     "86c8f7d2cf9efb2046de056991ea81e7be8810282c3336f40d0b4a09a73459f7": {
@@ -290,7 +564,7 @@
       ],
       "score": 100,
       "label": "MALICIOUS",
-      "first_seen": 1785117556.0227323
+      "first_seen": 1785162997.927902
     },
     "bde6032c28b3d20bff54733467ece4f794ba965346ca4fec6f65b58ea62e2f12": {
       "md5": "82bdc56def15c19c0aedaa015989a9d3",
@@ -302,7 +576,30 @@
       ],
       "score": 100,
       "label": "MALICIOUS",
-      "first_seen": 1785117556.1837265
+      "first_seen": 1785162868.9088922
+    },
+    "923410c13c795432ba324285bf76c2320669291199e8cc48add611124950226c": {
+      "md5": "22b57cad5ad2ac3f69baa595e0b73708",
+      "families": [
+        "Cobalt Strike",
+        "Metasploit",
+        "Sliver",
+        "Conti",
+        "Mirai Botnet",
+        "Mozi Botnet"
+      ],
+      "score": 100,
+      "label": "MALICIOUS",
+      "first_seen": 1785157756.8406885
+    },
+    "7fed5b704f9cb93aa1fb1c6f495c117391c46f7bdcb847f0472d0b94af9f8ad5": {
+      "md5": "53bd5763c12fd07bdb1605e257f96127",
+      "families": [
+        "Mirai Botnet"
+      ],
+      "score": 80,
+      "label": "MALICIOUS",
+      "first_seen": 1785158897.876901
     }
   },
   "shellcode_templates": {}

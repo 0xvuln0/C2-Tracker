@@ -1229,10 +1229,258 @@ def detect_elf_anomalies(data: bytes) -> list[str]:
             anomalies.append("Entry point: XOR RDI,RDI (shellcode)")
         if "6a0958" in entry_str:  # PUSH 9; POP RAX (setuid)
             anomalies.append("Entry point: PUSH 9; POP RAX (setuid syscall)")
-        if "6a3c58" in entry_str:  # PUSH 0x3c; POP RAX (exit)
-            anomalies.append("Entry point: PUSH 0x3c; POP RAX (exit syscall)")
+            if "6a3c58" in entry_str:  # PUSH 0x3c; POP RAX (exit)
+                anomalies.append("Entry point: PUSH 0x3c; POP RAX (exit syscall)")
 
     return anomalies
+
+
+def analyze_unusual_behavior(data: bytes, result: "FileScanResult") -> list[str]:
+    """Analyze binary for unusual/suspicious behavior patterns."""
+    findings = []
+
+    # --- No readable strings ---
+    ascii_count = sum(1 for b in data if 32 <= b <= 126)
+    if len(data) > 100:
+        ascii_ratio = ascii_count / len(data)
+        if ascii_ratio < 0.05:
+            findings.append("Very few readable strings (possible obfuscation/packing)")
+
+    # --- High entropy sections (packed/encrypted) ---
+    if result.entropy > 7.2:
+        findings.append("High entropy throughout (likely packed or encrypted)")
+    if result.entropy > 7.8:
+        findings.append("Very high entropy - almost certainly packed/encrypted malware")
+
+    # --- Unusual PE section names ---
+    if data[:2] == b"MZ" and len(data) > 100:
+        try:
+            pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+                num_sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
+                section_start = pe_offset + 24 + struct.unpack_from("<H", data, pe_offset + 20)[0]
+                for i in range(min(num_sections, 20)):
+                    offset = section_start + (i * 40)
+                    if offset + 40 > len(data):
+                        break
+                    name = data[offset:offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
+                    if name:
+                        # Known suspicious section names
+                        sus_sections = {
+                            ".vmp", ".themida", ".enigma", ".packing",
+                            ".aspack", ".adata", ".packed", ".RLPack",
+                            ".MPRESS1", ".MPRESS2", ".petite", ".yP",
+                            ".UPX0", ".UPX1", ".UPX2", ".UPX!",
+                        }
+                        if name in sus_sections:
+                            findings.append(f"Suspicious PE section: {name} (possible packing)")
+
+                        # Section with executable + writable (unusual)
+                        characteristics = struct.unpack_from("<I", data, offset + 36)[0]
+                        is_exec = bool(characteristics & 0x20000000)
+                        is_write = bool(characteristics & 0x80000000)
+                        is_read = bool(characteristics & 0x40000000)
+                        if is_exec and is_write:
+                            findings.append(f"Section {name} is executable+writable (unusual)")
+                        if is_exec and not is_read:
+                            findings.append(f"Section {name} is executable but not readable (unusual)")
+        except (struct.error, IndexError):
+            pass
+
+    # --- Unusual ELF characteristics ---
+    if data[:4] == b"\x7fELF" and len(data) > 64:
+        try:
+            ei_class = data[4]
+            if ei_class == 2:  # 64-bit
+                e_type = struct.unpack_from("<H", data, 16)[0]
+                e_phoff = struct.unpack_from("<Q", data, 28)[0]
+                e_shnum = struct.unpack_from("<H", data, 60)[0]
+
+                # Executable with no sections
+                if e_type == 2 and e_shnum == 0:
+                    findings.append("Executable ELF with no section headers")
+
+                # Check for unusual program headers
+                if e_phoff > 0 and e_phoff < len(data) - 56:
+                    e_phnum = struct.unpack_from("<H", data, 56)[0]
+                    for i in range(min(e_phnum, 20)):
+                        ph_offset = e_phoff + (i * 56)
+                        if ph_offset + 56 > len(data):
+                            break
+                        p_type = struct.unpack_from("<I", data, ph_offset)[0]
+                        p_flags = struct.unpack_from("<I", data, ph_offset + 4)[0]
+
+                        # PT_NOTE with execute flag (unusual)
+                        if p_type == 4 and (p_flags & 1):
+                            findings.append("PT_NOTE segment with execute flag")
+
+                        # PT_LOAD with high permissions
+                        if p_type == 1:
+                            is_exec = bool(p_flags & 1)
+                            is_write = bool(p_flags & 2)
+                            if is_exec and is_write:
+                                findings.append("PT_LOAD segment is executable+writable")
+        except (struct.error, IndexError):
+            pass
+
+    # --- Anti-debugging indicators ---
+    anti_debug_patterns = [
+        (b"\xcd\x03", "INT3 breakpoint (anti-debug)"),
+        (b"\x64\x8b\x35\x30\x00\x00\x00", "FS:[0x30] (PEB access)"),
+        (b"\x64\x8b\x25\x00\x00\x00\x00", "FS:[0] (SEH)"),
+        (b"IsDebuggerPresent", "IsDebuggerPresent API"),
+        (b"CheckRemoteDebuggerPresent", "CheckRemoteDebuggerPresent API"),
+        (b"NtQueryInformationProcess", "NtQueryInformationProcess (anti-debug)"),
+        (b"OutputDebugStringA", "OutputDebugString (anti-debug)"),
+        (b"FindWindowA", "FindWindow (anti-debug)"),
+        (b"QueryPerformanceCounter", "QueryPerformanceCounter (timing)"),
+        (b"rdtsc", "RDTSC instruction (timing)"),
+        (b"\x0f\x31", "RDTSC instruction (timing)"),
+    ]
+    for pattern, desc in anti_debug_patterns:
+        if pattern in data:
+            findings.append(f"Anti-analysis: {desc}")
+
+    # --- Anti-VM indicators ---
+    anti_vm_strings = [
+        b"VMwareVMware",
+        b"VBoxVBoxVBox",
+        b"Microsoft Hv",
+        b"XenVMMXenVMM",
+        b"prl hyperv",
+        b"VIRTUALBOX",
+        b"VMWARE",
+        b"QEMU",
+        b"Virtual Machine",
+        b"VM VirtualBox",
+        b"SbieDll.dll",  # Sandboxie
+        b"sbiedll",
+        b"dbghelp",
+        b"api_log",
+        b"dir_watch",
+    ]
+    vm_hits = 0
+    for pattern in anti_vm_strings:
+        if pattern in data:
+            vm_hits += 1
+    if vm_hits >= 3:
+        findings.append(f"Anti-VM: Multiple VM indicators ({vm_hits} matches)")
+    elif vm_hits >= 1:
+        findings.append("Anti-VM: Virtual machine detection strings")
+
+    # --- Anti-sandbox indicators ---
+    sandbox_strings = [
+        b"sbiedll.dll",  # Sandboxie
+        b"sample.exe",  # Common sandbox name
+        b"malware",  # Common analysis name
+        b"virus",  # Common analysis name
+        b"test.exe",  # Generic test name
+        b"sandbox",  # Sandbox reference
+        b"analysis",  # Analysis reference
+        b"reverse.exe",  # Reverse engineering tool
+        b"ollydbg",  # OllyDbg
+        b"x64dbg",  # x64dbg
+        b"ida.exe",  # IDA Pro
+        b"ida64.exe",  # IDA Pro 64
+        b"procmon",  # Process Monitor
+        b"wireshark",  # Wireshark
+        b"tcpdump",  # tcpdump
+        b"flame",  # Flame analysis tool
+    ]
+    sandbox_hits = sum(1 for s in sandbox_strings if s.lower() in data.lower())
+    if sandbox_hits >= 2:
+        findings.append(f"Anti-sandbox: Multiple sandbox indicators ({sandbox_hits} matches)")
+    elif sandbox_hits >= 1:
+        findings.append("Anti-sandbox: Sandbox detection strings")
+
+    # --- String obfuscation patterns ---
+    obfuscation_patterns = [
+        (rb"\\x[0-9a-f]{2}\\x[0-9a-f]{2}\\x[0-9a-f]{2}\\x[0-9a-f]{2}", "Hex-encoded strings"),
+        (rb"\\u[0-9a-f]{4}\\u[0-9a-f]{4}", "Unicode-escaped strings"),
+        (rb"\\[0-7]{3}\\[0-7]{3}", "Octal-encoded strings"),
+        (rb"chr\(\d+\)\s*\+\s*chr\(\d+\)", "chr() concatenation"),
+        (rb"String\.fromCharCode", "fromCharCode obfuscation"),
+        (rb"atob\(", "Base64 decoding (atob)"),
+        (rb"btoa\(", "Base64 encoding (btoa)"),
+    ]
+    for pattern, desc in obfuscation_patterns:
+        if re.search(pattern, data):
+            findings.append(f"Obfuscation: {desc}")
+
+    # --- Unusual network patterns ---
+    # Long encoded/obfuscated URLs
+    url_pattern = re.compile(rb"https?://[a-zA-Z0-9+/=]{50,}")
+    if url_pattern.search(data):
+        findings.append("Unusually long URL (possible obfuscation)")
+
+    # IP address patterns that look like C2
+    ip_encoded_patterns = [
+        (rb"\\x([0-9a-f]{2})\\x([0-9a-f]{2})\\x([0-9a-f]{2})\\x([0-9a-f]{2})", "Hex-encoded IP"),
+        (rb"(\d{1,3}\+){3}\d{1,3}", "IP-like arithmetic"),
+    ]
+    for pattern, desc in ip_encoded_patterns:
+        if re.search(pattern, data):
+            findings.append(f"Network: {desc}")
+
+    # --- Unusual file properties ---
+    filename = os.path.basename(result.path) if result.path else ""
+
+    # Double extensions (common in malware)
+    if "." in filename:
+        parts = filename.split(".")
+        if len(parts) >= 3:
+            real_ext = parts[-1].lower()
+            fake_ext = parts[-2].lower()
+            doc_exts = {"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "jpg", "png", "gif", "txt"}
+            exe_exts = {"exe", "dll", "scr", "bat", "cmd", "com", "pif", "vbs", "js", "wsf"}
+            if real_ext in exe_exts and fake_ext in doc_exts:
+                findings.append(f"Double extension detected (.{fake_ext}.{real_ext}) - social engineering")
+
+    # Very long filename (obfuscation)
+    if len(filename) > 50:
+        findings.append("Unusually long filename (possible obfuscation)")
+
+    # Filename with many spaces (hiding extension)
+    if filename.count(" ") > 5:
+        findings.append("Filename with many spaces (possible extension hiding)")
+
+    # --- Import/export anomalies (PE) ---
+    if data[:2] == b"MZ":
+        # Check for very few imports (possible manual import loading)
+        try:
+            pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+                # Look for LoadLibrary/GetProcAddress (manual import loading)
+                manual_import = [b"LoadLibraryA", b"LoadLibraryW", b"GetProcAddress"]
+                manual_count = sum(1 for m in manual_import if m in data)
+                if manual_count >= 2:
+                    findings.append("Manual import loading (LoadLibrary+GetProcAddress)")
+        except (struct.error, IndexError):
+            pass
+
+    # --- Unusual file size patterns ---
+    if 100 < len(data) < 500 and data[:4] == b"\x7fELF":
+        findings.append("Tiny ELF binary (likely shellcode loader)")
+
+    # --- Data in code section (PE) ---
+    if data[:2] == b"MZ" and len(data) > 1000:
+        try:
+            pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+                num_sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
+                section_start = pe_offset + 24 + struct.unpack_from("<H", data, pe_offset + 20)[0]
+                for i in range(min(num_sections, 20)):
+                    offset = section_start + (i * 40)
+                    if offset + 40 > len(data):
+                        break
+                    name = data[offset:offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
+                    raw_size = struct.unpack_from("<I", data, offset + 16)[0]
+                    if name in (".text", ".code") and raw_size > len(data) * 0.8:
+                        findings.append(f"Section {name} contains most of file (possible overlay)")
+        except (struct.error, IndexError):
+            pass
+
+    return findings
 
 
 def scan_file(file_path: str) -> FileScanResult:
@@ -1312,7 +1560,8 @@ def scan_file(file_path: str) -> FileScanResult:
     # --- Binary pattern detection (for shellcode, ELF malware, etc.) ---
     bin_patterns, bin_families = detect_binary_patterns(data)
     for bp in bin_patterns:
-        result.suspicious_strings.append(bp)
+        if bp not in result.suspicious_strings:
+            result.suspicious_strings.append(bp)
 
     # Add binary-detected families
     for family, reason, confidence in bin_families:
@@ -1327,7 +1576,14 @@ def scan_file(file_path: str) -> FileScanResult:
     if data[:4] == b"\x7fELF":
         elf_anomalies = detect_elf_anomalies(data)
         for ea in elf_anomalies:
-            result.suspicious_strings.append(ea)
+            if ea not in result.suspicious_strings:
+                result.suspicious_strings.append(ea)
+
+    # --- Unusual binary behavior analysis ---
+    unusual = analyze_unusual_behavior(data, result)
+    for u in unusual:
+        if u not in result.suspicious_strings:
+            result.suspicious_strings.append(u)
 
     # Extract and check embedded IPs
     result.embedded_ips = extract_ips_from_strings(strings)
@@ -1421,6 +1677,19 @@ def scan_file(file_path: str) -> FileScanResult:
     if bin_families:
         high_conf = [f for f, _, c in bin_families if c >= 80]
         score += len(high_conf) * 15
+
+    # Bonus for unusual behavior indicators
+    anti_analysis_indicators = [
+        "Anti-analysis:", "Anti-VM:", "Anti-sandbox:", "Obfuscation:",
+        "Suspicious PE section:", "Double extension", "Manual import loading",
+        "very few readable strings", "executable+writable",
+    ]
+    anti_hits = sum(1 for ai in anti_analysis_indicators
+                    if any(ai in s for s in result.suspicious_strings))
+    if anti_hits >= 3:
+        score += 25
+    elif anti_hits >= 1:
+        score += 15
 
     result.risk_score = min(score, 100)
 
