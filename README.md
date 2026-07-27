@@ -49,19 +49,19 @@ Get free API keys:
 
 ```bash
 # Basic scan (requires sudo for live connection data)
-sudo python3 c2tracker/cli.py scan
+sudo python3 cli.py scan
 
 # Show all connections with verbose output
-sudo python3 c2tracker/cli.py scan -s -v
+sudo python3 cli.py scan -s -v
 
 # Continuous monitoring (check every 10 seconds)
-sudo python3 c2tracker/cli.py scan -m -i 10
+sudo python3 cli.py scan -m -i 10
 
 # Filter out private/internal IPs
-sudo python3 c2tracker/cli.py scan -f
+sudo python3 cli.py scan -f
 
 # Local-only scan (no Shodan/Censys lookups, just malware DB + network)
-sudo python3 c2tracker/cli.py scan --no-api
+sudo python3 cli.py scan --no-api
 ```
 
 ### Hunt C2 infrastructure via Shodan
@@ -105,23 +105,23 @@ The file scanner detects:
 
 ```bash
 # Check one or more IPs
-python3 c2tracker/cli.py check 45.77.65.114
-python3 c2tracker/cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
+python3 cli.py check 45.77.65.114
+python3 cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
 ```
 
 ### Search the threat database
 
 ```bash
 # Search by malware family
-python3 c2tracker/cli.py family "cobalt strike"
-python3 c2tracker/cli.py family trickbot
+python3 cli.py family "cobalt strike"
+python3 cli.py family trickbot
 
 # Search by threat actor
-python3 c2tracker/cli.py actor "Evil Corp"
-python3 c2tracker/cli.py actor "Conti Group"
+python3 cli.py actor "Evil Corp"
+python3 cli.py actor "Conti Group"
 
 # Show database summary
-python3 c2tracker/cli.py db --families --actors
+python3 cli.py db --families --actors
 ```
 
 ## C2 Frameworks Detected
