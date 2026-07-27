@@ -31,15 +31,21 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 
 ## Quick Start
 
-### 1. Clone and install
+### 1. Install
 
-**From PyPI (recommended):**
+**From PyPI:**
 ```bash
 pip install c2tracker
-c2tracker --help
 ```
 
-**From source:**
+> On Parrot/Debian, if you get `externally-managed-environment`, use `--break-system-packages` or install in a venv:
+> ```bash
+> pip install c2tracker --break-system-packages
+> # or
+> python3 -m venv ~/venv && source ~/venv/bin/activate && pip install c2tracker
+> ```
+
+**From source (for development):**
 ```bash
 git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
