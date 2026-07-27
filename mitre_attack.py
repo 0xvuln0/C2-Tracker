@@ -16,9 +16,20 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries.",
         "tactics": ["TA0002"],
         "patterns": [
-            r"cmd\.exe", r"powershell", r"pwsh", r"/bin/sh", r"/bin/bash",
-            r"python.*-c", r"perl.*-e", r"ruby.*-e", r"php.*-r",
-            r"mshta", r"wscript", r"cscript", r"regsvr32", r"rundll32",
+            r"cmd\.exe",
+            r"powershell",
+            r"pwsh",
+            r"/bin/sh",
+            r"/bin/bash",
+            r"python.*-c",
+            r"perl.*-e",
+            r"ruby.*-e",
+            r"php.*-r",
+            r"mshta",
+            r"wscript",
+            r"cscript",
+            r"regsvr32",
+            r"rundll32",
         ],
     },
     "T1059.001": {
@@ -56,10 +67,17 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may inject code into processes in order to evade process-based defenses.",
         "tactics": ["TA0005"],
         "patterns": [
-            r"WriteProcessMemory", r"CreateRemoteThread", r"VirtualAllocEx",
-            r"VirtualProtectEx", r"NtCreateThreadEx", r"QueueUserAPC",
-            r"RtlCreateUserThread", r"SetThreadContext", r"ptrace",
-            r"process_vm_writev", r"/proc/.*/mem",
+            r"WriteProcessMemory",
+            r"CreateRemoteThread",
+            r"VirtualAllocEx",
+            r"VirtualProtectEx",
+            r"NtCreateThreadEx",
+            r"QueueUserAPC",
+            r"RtlCreateUserThread",
+            r"SetThreadContext",
+            r"ptrace",
+            r"process_vm_writev",
+            r"/proc/.*/mem",
         ],
     },
     "T1053": {
@@ -73,8 +91,13 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may communicate using application layer protocols to avoid detection.",
         "tactics": ["TA0011"],
         "patterns": [
-            r"http://", r"https://", r"ftp://", r"smtp://", r"dns://",
-            r"C2", r"command.and.control",
+            r"http://",
+            r"https://",
+            r"ftp://",
+            r"smtp://",
+            r"dns://",
+            r"C2",
+            r"command.and.control",
         ],
     },
     "T1105": {
@@ -82,9 +105,14 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may transfer tools or other files into an infected environment.",
         "tactics": ["TA0011"],
         "patterns": [
-            r"wget.*http", r"curl.*http", r"certutil.*-urlcache",
-            r"bitsadmin.*\/transfer", r"Invoke-WebRequest",
-            r"DownloadString", r"DownloadFile", r"Net\.WebClient",
+            r"wget.*http",
+            r"curl.*http",
+            r"certutil.*-urlcache",
+            r"bitsadmin.*\/transfer",
+            r"Invoke-WebRequest",
+            r"DownloadString",
+            r"DownloadFile",
+            r"Net\.WebClient",
         ],
     },
     "T1078": {
@@ -104,9 +132,16 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may attempt to dump credentials to obtain account login and credential material.",
         "tactics": ["TA0006"],
         "patterns": [
-            r"mimikatz", r"sekurlsa", r"lsass", r"procdump.*lsass",
-            r"comsvcs.*MiniDump", r"pypykatz", r"crackmapexec",
-            r"hashdump", r"sam\.db", r"ntds\.dit",
+            r"mimikatz",
+            r"sekurlsa",
+            r"lsass",
+            r"procdump.*lsass",
+            r"comsvcs.*MiniDump",
+            r"pypykatz",
+            r"crackmapexec",
+            r"hashdump",
+            r"sam\.db",
+            r"ntds\.dit",
         ],
     },
     "T1003.001": {
@@ -120,8 +155,15 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may encrypt data on target systems to interrupt availability.",
         "tactics": ["TA0040"],
         "patterns": [
-            r"encrypt", r"ransom", r"bitcoin", r"wallet", r"decrypt",
-            r"\.locked", r"\.encrypted", r"\.crypto", r"restore_files",
+            r"encrypt",
+            r"ransom",
+            r"bitcoin",
+            r"wallet",
+            r"decrypt",
+            r"\.locked",
+            r"\.encrypted",
+            r"\.crypto",
+            r"restore_files",
         ],
     },
     "T1027": {
@@ -129,8 +171,14 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may attempt to make an executable or file difficult to discover or analyze.",
         "tactics": ["TA0005"],
         "patterns": [
-            r"base64", r"encode", r"decode", r"obfuscat", r"packed",
-            r"\\x[0-9a-f]{2}", r"chr\(\d+\)", r"fromCharCode",
+            r"base64",
+            r"encode",
+            r"decode",
+            r"obfuscat",
+            r"packed",
+            r"\\x[0-9a-f]{2}",
+            r"chr\(\d+\)",
+            r"fromCharCode",
         ],
     },
     "T1219": {
@@ -138,8 +186,13 @@ TECHNIQUES: dict[str, dict] = {
         "description": "An adversary may use legitimate remote access tools to establish C2.",
         "tactics": ["TA0011"],
         "patterns": [
-            r"teamviewer", r"anydesk", r"todesk", r"rustdesk",
-            r"splashtop", r"beyond\s*control", r"screenconnect",
+            r"teamviewer",
+            r"anydesk",
+            r"todesk",
+            r"rustdesk",
+            r"splashtop",
+            r"beyond\s*control",
+            r"screenconnect",
         ],
     },
     "T1572": {
@@ -147,8 +200,14 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may tunnel network communications to avoid detection.",
         "tactics": ["TA0011"],
         "patterns": [
-            r"tunnel", r"ngrok", r"serveo", r"localtunnel",
-            r"ssh.*-L", r"ssh.*-R", r"dns.*tunnel", r"iodine",
+            r"tunnel",
+            r"ngrok",
+            r"serveo",
+            r"localtunnel",
+            r"ssh.*-L",
+            r"ssh.*-R",
+            r"dns.*tunnel",
+            r"iodine",
         ],
     },
     "T1562": {
@@ -156,8 +215,12 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may maliciously modify components of a victim environment.",
         "tactics": ["TA0005"],
         "patterns": [
-            r"disable.*defender", r"stop.*windefend", r"Set-MpPreference",
-            r"sc\s+stop", r"sc\s+delete", r"bcdedit.*recoveryenabled\s+no",
+            r"disable.*defender",
+            r"stop.*windefend",
+            r"Set-MpPreference",
+            r"sc\s+stop",
+            r"sc\s+delete",
+            r"bcdedit.*recoveryenabled\s+no",
         ],
     },
     "T1070": {
@@ -165,8 +228,12 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may delete or modify artifacts generated within systems.",
         "tactics": ["TA0010", "TA0005"],
         "patterns": [
-            r"wevtutil\s+cl", r"Clear-EventLog", r"vssadmin\s+delete",
-            r"cipher\s+/w", r"timestomp", r"del.*\/f.*\/q",
+            r"wevtutil\s+cl",
+            r"Clear-EventLog",
+            r"vssadmin\s+delete",
+            r"cipher\s+/w",
+            r"timestomp",
+            r"del.*\/f.*\/q",
         ],
     },
     "T1134": {
@@ -240,8 +307,13 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may use an existing, legitimate external Web service to exfiltrate data.",
         "tactics": ["TA0010"],
         "patterns": [
-            r"pastebin", r"hastebin", r"github\.com.*raw", r"dropbox",
-            r"gofile", r"transfer\.sh", r"0x0\.st",
+            r"pastebin",
+            r"hastebin",
+            r"github\.com.*raw",
+            r"dropbox",
+            r"gofile",
+            r"transfer\.sh",
+            r"0x0\.st",
         ],
     },
     "T1571": {
@@ -249,8 +321,14 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may communicate using a non-standard port instead of the usual port.",
         "tactics": ["TA0011"],
         "patterns": [
-            r"port\s*[:=]\s*\d+", r"connect.*:\d+", r"listen.*:\d+",
-            r"4444", r"4443", r"8443", r"1337", r"31337",
+            r"port\s*[:=]\s*\d+",
+            r"connect.*:\d+",
+            r"listen.*:\d+",
+            r"4444",
+            r"4443",
+            r"8443",
+            r"1337",
+            r"31337",
         ],
     },
     "T1095": {
@@ -282,8 +360,10 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may manipulate accounts to maintain and/or elevate access.",
         "tactics": ["TA0003", "TA0004"],
         "patterns": [
-            r"net\s+user.*\/add", r"net\s+localgroup.*\/add",
-            r"New-LocalUser", r"Add-LocalGroupMember",
+            r"net\s+user.*\/add",
+            r"net\s+localgroup.*\/add",
+            r"New-LocalUser",
+            r"Add-LocalGroupMember",
             r"net\s+user.*\/active.*yes",
         ],
     },
@@ -292,9 +372,12 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may configure system settings to automatically execute a program during boot.",
         "tactics": ["TA0003"],
         "patterns": [
-            r"reg\s+add.*\\Run", r"reg\s+add.*\\RunOnce",
-            r"HKLM.*\\Run", r"HKCU.*\\Run",
-            r"StartupFolder", r"New-Service",
+            r"reg\s+add.*\\Run",
+            r"reg\s+add.*\\RunOnce",
+            r"HKLM.*\\Run",
+            r"HKCU.*\\Run",
+            r"StartupFolder",
+            r"New-Service",
         ],
     },
     "T1543": {
@@ -308,8 +391,11 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may attempt to manipulate features of files to make them appear legitimate.",
         "tactics": ["TA0005"],
         "patterns": [
-            r"\.pdf\.exe", r"\.doc\.exe", r"\.jpg\.exe",
-            r"double.*ext", r"masquerad",
+            r"\.pdf\.exe",
+            r"\.doc\.exe",
+            r"\.jpg\.exe",
+            r"double.*ext",
+            r"masquerad",
         ],
     },
     "T1497": {
@@ -317,8 +403,15 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may employ means to detect and avoid virtualization and analysis environments.",
         "tactics": ["TA0007", "TA0005"],
         "patterns": [
-            r"VMware", r"VirtualBox", r"VBox", r"QEMU", r"Xen",
-            r"Sandboxie", r"sbiedll", r"sample\.exe", r"malware",
+            r"VMware",
+            r"VirtualBox",
+            r"VBox",
+            r"QEMU",
+            r"Xen",
+            r"Sandboxie",
+            r"sbiedll",
+            r"sample\.exe",
+            r"malware",
         ],
     },
     "T1622": {
@@ -326,9 +419,13 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may employ debugging string checks to detect a debugger.",
         "tactics": ["TA0005", "TA0007"],
         "patterns": [
-            r"IsDebuggerPresent", r"CheckRemoteDebuggerPresent",
-            r"NtQueryInformationProcess", r"OutputDebugString",
-            r"FindWindow.*OllyDbg", r"INT3", r"\\xcc",
+            r"IsDebuggerPresent",
+            r"CheckRemoteDebuggerPresent",
+            r"NtQueryInformationProcess",
+            r"OutputDebugString",
+            r"FindWindow.*OllyDbg",
+            r"INT3",
+            r"\\xcc",
         ],
     },
     "T1027.002": {
@@ -336,8 +433,15 @@ TECHNIQUES: dict[str, dict] = {
         "description": "Adversaries may perform software packing to conceal their code.",
         "tactics": ["TA0005"],
         "patterns": [
-            r"UPX", r"ASPack", r"PECompact", r"Themida", r"VMProtect",
-            r"Enigma", r"MPRESS", r"petite", r"packed",
+            r"UPX",
+            r"ASPack",
+            r"PECompact",
+            r"Themida",
+            r"VMProtect",
+            r"Enigma",
+            r"MPRESS",
+            r"petite",
+            r"packed",
         ],
     },
 }
@@ -366,12 +470,14 @@ def map_to_mitre(suspicious_strings: list[str]) -> list[dict]:
 
         for pattern in tech["patterns"]:
             if re.search(pattern, text, re.IGNORECASE):
-                matched.append({
-                    "id": tech_id,
-                    "name": tech["name"],
-                    "description": tech["description"],
-                    "tactics": tech["tactics"],
-                })
+                matched.append(
+                    {
+                        "id": tech_id,
+                        "name": tech["name"],
+                        "description": tech["description"],
+                        "tactics": tech["tactics"],
+                    }
+                )
                 seen_ids.add(tech_id)
                 break
 

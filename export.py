@@ -68,9 +68,18 @@ def export_csv(results: FileScanResult | list[FileScanResult], output_path: str)
         results = [results]
 
     fieldnames = [
-        "path", "file_size", "md5", "sha256", "file_type", "entropy",
-        "risk_score", "risk_label", "detected_families", "embedded_ips",
-        "embedded_domains", "suspicious_behaviors",
+        "path",
+        "file_size",
+        "md5",
+        "sha256",
+        "file_type",
+        "entropy",
+        "risk_score",
+        "risk_label",
+        "detected_families",
+        "embedded_ips",
+        "embedded_domains",
+        "suspicious_behaviors",
     ]
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
@@ -78,20 +87,22 @@ def export_csv(results: FileScanResult | list[FileScanResult], output_path: str)
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for r in results:
-            writer.writerow({
-                "path": r.path,
-                "file_size": r.file_size,
-                "md5": r.md5,
-                "sha256": r.sha256,
-                "file_type": r.file_type,
-                "entropy": r.entropy,
-                "risk_score": r.risk_score,
-                "risk_label": r.risk_label,
-                "detected_families": "|".join(r.detected_families),
-                "embedded_ips": "|".join(r.embedded_ips),
-                "embedded_domains": "|".join(r.embedded_domains),
-                "suspicious_behaviors": "|".join(r.suspicious_strings),
-            })
+            writer.writerow(
+                {
+                    "path": r.path,
+                    "file_size": r.file_size,
+                    "md5": r.md5,
+                    "sha256": r.sha256,
+                    "file_type": r.file_type,
+                    "entropy": r.entropy,
+                    "risk_score": r.risk_score,
+                    "risk_label": r.risk_label,
+                    "detected_families": "|".join(r.detected_families),
+                    "embedded_ips": "|".join(r.embedded_ips),
+                    "embedded_domains": "|".join(r.embedded_domains),
+                    "suspicious_behaviors": "|".join(r.suspicious_strings),
+                }
+            )
 
     return output_path
 

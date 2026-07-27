@@ -90,14 +90,16 @@ def fetch_threatfox(days: int = 30, limit: int = 5000) -> list[dict[str, str]]:
             malware = entry.get("malware_printable", "") or entry.get("malware", "Unknown")
             protocol = entry.get("protocol", "tcp")
 
-            results.append({
-                "ip": ip,
-                "family": malware,
-                "port": port,
-                "protocol": protocol,
-                "source": "ThreatFox",
-                "first_seen": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            })
+            results.append(
+                {
+                    "ip": ip,
+                    "family": malware,
+                    "port": port,
+                    "protocol": protocol,
+                    "source": "ThreatFox",
+                    "first_seen": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                }
+            )
     except Exception:
         pass
     return results
@@ -123,15 +125,17 @@ def fetch_urlhaus(limit: int = 1000) -> list[dict[str, str]]:
             ip = entry.get("host")
             if not ip:
                 continue
-            results.append({
-                "ip": ip,
-                "family": entry.get("threat", "Unknown"),
-                "port": None,
-                "protocol": "https" if "https" in entry.get("url", "") else "http",
-                "source": "URLhaus",
-                "first_seen": entry.get("date_added", "")[:10],
-                "url": entry.get("url", ""),
-            })
+            results.append(
+                {
+                    "ip": ip,
+                    "family": entry.get("threat", "Unknown"),
+                    "port": None,
+                    "protocol": "https" if "https" in entry.get("url", "") else "http",
+                    "source": "URLhaus",
+                    "first_seen": entry.get("date_added", "")[:10],
+                    "url": entry.get("url", ""),
+                }
+            )
     except Exception:
         pass
     return results
@@ -155,6 +159,7 @@ def merge_iocs(online_iocs: list[dict[str, str]], existing_db_path: str | None =
             with open(existing_db_path) as f:
                 content = f.read()
             import re
+
             for m in re.finditer(r'MalwareIP\("(\d+\.\d+\.\d+\.\d+)"', content):
                 existing_ips.add(m.group(1))
         except Exception:

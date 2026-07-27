@@ -53,7 +53,7 @@ C2_QUERIES: dict[str, list[str]] = {
     ],
     "Sliver": [
         "ssl:multiplayer ssl.cert.issuer.cn:operators",
-        'product:\'Sliver C2\'',
+        "product:'Sliver C2'",
     ],
     "Deimos C2": [
         "http.html_hash:-14029177",
@@ -124,7 +124,7 @@ C2_QUERIES: dict[str, list[str]] = {
     ],
     "Collector Stealer": [
         'http.html:"Collector Stealer"',
-        'http.html:getmineteam',
+        "http.html:getmineteam",
         'product:"Collector Stealer"',
     ],
     "Mystic Stealer": [
@@ -253,6 +253,7 @@ C2_QUERIES: dict[str, list[str]] = {
 @dataclass
 class HuntResult:
     """Result from hunting a single product via Shodan."""
+
     product: str
     ips: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

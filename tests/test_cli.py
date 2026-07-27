@@ -27,16 +27,20 @@ class TestConfig:
 class TestValidateIp:
     def test_valid_ip(self):
         from cli import _validate_ip
+
         assert _validate_ip("8.8.8.8") == "8.8.8.8"
 
     def test_invalid_ip(self):
         from cli import _validate_ip
+
         assert _validate_ip("not-an-ip") is None
 
     def test_ipv6_rejected(self):
         from cli import _validate_ip
+
         assert _validate_ip("::1") is None
 
     def test_empty_string(self):
         from cli import _validate_ip
+
         assert _validate_ip("") is None

@@ -24,6 +24,7 @@ from network import Connection
 # ThreatResult scoring and labelling
 # ---------------------------------------------------------------------------
 
+
 class TestThreatResultScoring:
     def test_empty_result_is_zero(self):
         r = ThreatResult(ip="1.2.3.4")
@@ -76,6 +77,7 @@ class TestThreatResultScoring:
 
     def test_db_matches_contribute_20_each_capped_at_40(self):
         from malware_db import MalwareIP
+
         m1 = MalwareIP("1.2.3.4", "Cobalt Strike", "Various", "test", 50050)
         m2 = MalwareIP("1.2.3.4", "Metasploit", "Various", "test", 4444)
         r = ThreatResult(ip="1.2.3.4", malware_db_matches=[m1, m2])
@@ -127,6 +129,7 @@ class TestThreatResultLabels:
 # ---------------------------------------------------------------------------
 # Banner / service analysis
 # ---------------------------------------------------------------------------
+
 
 class TestAnalyzeShodanBanners:
     def test_detects_cobalt_strike(self):
@@ -186,27 +189,39 @@ class TestAnalyzeCensysServices:
 class TestAnalyzeConnectionPorts:
     def test_detects_cobalt_strike_port(self):
         conn = Connection(
-            local_addr="10.0.0.1", local_port=12345,
-            remote_addr="1.2.3.4", remote_port=50050,
-            status="ESTABLISHED", pid=1, process_name="test",
+            local_addr="10.0.0.1",
+            local_port=12345,
+            remote_addr="1.2.3.4",
+            remote_port=50050,
+            status="ESTABLISHED",
+            pid=1,
+            process_name="test",
         )
         indicators = analyze_connection_ports([conn])
         assert "Cobalt Strike" in indicators
 
     def test_detects_metasploit_port(self):
         conn = Connection(
-            local_addr="10.0.0.1", local_port=12345,
-            remote_addr="1.2.3.4", remote_port=4444,
-            status="ESTABLISHED", pid=1, process_name="test",
+            local_addr="10.0.0.1",
+            local_port=12345,
+            remote_addr="1.2.3.4",
+            remote_port=4444,
+            status="ESTABLISHED",
+            pid=1,
+            process_name="test",
         )
         indicators = analyze_connection_ports([conn])
         assert "Metasploit (common)" in indicators
 
     def test_no_match_on_unknown_port(self):
         conn = Connection(
-            local_addr="10.0.0.1", local_port=12345,
-            remote_addr="1.2.3.4", remote_port=9999,
-            status="ESTABLISHED", pid=1, process_name="test",
+            local_addr="10.0.0.1",
+            local_port=12345,
+            remote_addr="1.2.3.4",
+            remote_port=9999,
+            status="ESTABLISHED",
+            pid=1,
+            process_name="test",
         )
         assert analyze_connection_ports([conn]) == []
 
@@ -214,6 +229,7 @@ class TestAnalyzeConnectionPorts:
 # ---------------------------------------------------------------------------
 # Full threat analysis
 # ---------------------------------------------------------------------------
+
 
 class TestAnalyzeThreat:
     def test_no_data_returns_low(self):
@@ -239,9 +255,13 @@ class TestAnalyzeThreat:
 
     def test_connection_port_adds_indicator(self):
         conn = Connection(
-            local_addr="10.0.0.1", local_port=12345,
-            remote_addr="1.2.3.4", remote_port=50050,
-            status="ESTABLISHED", pid=1, process_name="test",
+            local_addr="10.0.0.1",
+            local_port=12345,
+            remote_addr="1.2.3.4",
+            remote_port=50050,
+            status="ESTABLISHED",
+            pid=1,
+            process_name="test",
         )
         r = analyze_threat("1.2.3.4", connections=[conn])
         assert r.score > 0
@@ -264,9 +284,13 @@ class TestAnalyzeThreat:
             vulns=["CVE-2021-1234"],
         )
         conn = Connection(
-            local_addr="10.0.0.1", local_port=12345,
-            remote_addr="1.2.3.4", remote_port=50050,
-            status="ESTABLISHED", pid=1, process_name="test",
+            local_addr="10.0.0.1",
+            local_port=12345,
+            remote_addr="1.2.3.4",
+            remote_port=50050,
+            status="ESTABLISHED",
+            pid=1,
+            process_name="test",
         )
         r = analyze_threat("1.2.3.4", shodan_result=shodan, connections=[conn])
         assert r.score > 25
@@ -276,6 +300,7 @@ class TestAnalyzeThreat:
 # ---------------------------------------------------------------------------
 # Known C2 framework / port constants
 # ---------------------------------------------------------------------------
+
 
 class TestConstants:
     def test_frameworks_populated(self):
@@ -293,6 +318,7 @@ class TestConstants:
 # ---------------------------------------------------------------------------
 # Malware database
 # ---------------------------------------------------------------------------
+
 
 class TestMalwareDatabase:
     def test_database_populated(self):
@@ -335,6 +361,7 @@ class TestMalwareDatabase:
     def test_all_entries_have_valid_ips(self):
         for entry in KNOWN_MALWARE_IPS:
             import ipaddress
+
             ipaddress.ip_address(entry.ip)
 
     def test_all_entries_have_required_fields(self):

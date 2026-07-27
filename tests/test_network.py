@@ -38,17 +38,25 @@ class TestIsPrivateIp:
 class TestConnection:
     def test_remote_ip_property(self):
         conn = Connection(
-            local_addr="192.168.1.1", local_port=12345,
-            remote_addr="8.8.8.8", remote_port=443,
-            status="ESTABLISHED", pid=1234, process_name="curl",
+            local_addr="192.168.1.1",
+            local_port=12345,
+            remote_addr="8.8.8.8",
+            remote_port=443,
+            status="ESTABLISHED",
+            pid=1234,
+            process_name="curl",
         )
         assert conn.remote_ip == "8.8.8.8"
 
     def test_str_representation(self):
         conn = Connection(
-            local_addr="192.168.1.1", local_port=12345,
-            remote_addr="8.8.8.8", remote_port=443,
-            status="ESTABLISHED", pid=1234, process_name="curl",
+            local_addr="192.168.1.1",
+            local_port=12345,
+            remote_addr="8.8.8.8",
+            remote_port=443,
+            status="ESTABLISHED",
+            pid=1234,
+            process_name="curl",
         )
         s = str(conn)
         assert "192.168.1.1:12345" in s
@@ -57,9 +65,13 @@ class TestConnection:
 
     def test_str_unknown_process(self):
         conn = Connection(
-            local_addr="10.0.0.1", local_port=80,
-            remote_addr="1.2.3.4", remote_port=443,
-            status="ESTABLISHED", pid=None, process_name=None,
+            local_addr="10.0.0.1",
+            local_port=80,
+            remote_addr="1.2.3.4",
+            remote_port=443,
+            status="ESTABLISHED",
+            pid=None,
+            process_name=None,
         )
         s = str(conn)
         assert "unknown" in s

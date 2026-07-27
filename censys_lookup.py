@@ -37,6 +37,7 @@ def lookup_ip(api_id: str, api_secret: str, ip: str, use_cache: bool = True) -> 
     if use_cache:
         try:
             from api_cache import get_censys, set_censys
+
             cached = get_censys(ip)
             if cached:
                 result.ports = cached.get("ports", [])
@@ -55,11 +56,9 @@ def lookup_ip(api_id: str, api_secret: str, ip: str, use_cache: bool = True) -> 
         host = hosts.get(ip)
 
         result.ports = [svc["port"] for svc in host.get("services", []) if "port" in svc]
-        result.protocols = list({
-            svc.get("transport_protocol", "")
-            for svc in host.get("services", [])
-            if svc.get("transport_protocol")
-        })
+        result.protocols = list(
+            {svc.get("transport_protocol", "") for svc in host.get("services", []) if svc.get("transport_protocol")}
+        )
         result.services = host.get("services", [])
 
         loc = host.get("location", {})
@@ -76,14 +75,19 @@ def lookup_ip(api_id: str, api_secret: str, ip: str, use_cache: bool = True) -> 
         if use_cache:
             try:
                 from api_cache import set_censys
-                set_censys(ip, {
-                    "ports": result.ports, "protocols": result.protocols,
-                    "services": result.services,
-                    "location_country": result.location_country,
-                    "location_city": result.location_city,
-                    "autonomous_system_org": result.autonomous_system_org,
-                    "operating_system": result.operating_system,
-                })
+
+                set_censys(
+                    ip,
+                    {
+                        "ports": result.ports,
+                        "protocols": result.protocols,
+                        "services": result.services,
+                        "location_country": result.location_country,
+                        "location_city": result.location_city,
+                        "autonomous_system_org": result.autonomous_system_org,
+                        "operating_system": result.operating_system,
+                    },
+                )
             except ImportError:
                 pass
 

@@ -36,6 +36,7 @@ def lookup_ip(api_key: str, ip: str, use_cache: bool = True) -> ShodanResult:
     if use_cache:
         try:
             from api_cache import get_shodan, set_shodan
+
             cached = get_shodan(ip)
             if cached:
                 result.ports = cached.get("ports", [])
@@ -70,12 +71,21 @@ def lookup_ip(api_key: str, ip: str, use_cache: bool = True) -> ShodanResult:
         if use_cache:
             try:
                 from api_cache import set_shodan
-                set_shodan(ip, {
-                    "ports": result.ports, "hostnames": result.hostnames,
-                    "os": result.os, "org": result.org, "isp": result.isp,
-                    "country": result.country, "city": result.city,
-                    "banners": result.banners, "vulns": result.vulns,
-                })
+
+                set_shodan(
+                    ip,
+                    {
+                        "ports": result.ports,
+                        "hostnames": result.hostnames,
+                        "os": result.os,
+                        "org": result.org,
+                        "isp": result.isp,
+                        "country": result.country,
+                        "city": result.city,
+                        "banners": result.banners,
+                        "vulns": result.vulns,
+                    },
+                )
             except ImportError:
                 pass
 

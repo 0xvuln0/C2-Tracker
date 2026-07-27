@@ -25,6 +25,7 @@ from rich.text import Text
 
 try:
     from importlib.metadata import version as _get_version
+
     __version__ = _get_version("c2tracker")
 except Exception:
     __version__ = "0.1.0"
@@ -118,8 +119,7 @@ def print_threat_result(result) -> None:
         lines.append(f"  Org: {result.shodan_result.org or 'unknown'}")
         lines.append(f"  ISP: {result.shodan_result.isp or 'unknown'}")
         lines.append(
-            f"  Location: {result.shodan_result.city or 'unknown'}, "
-            f"{result.shodan_result.country or 'unknown'}"
+            f"  Location: {result.shodan_result.city or 'unknown'}, {result.shodan_result.country or 'unknown'}"
         )
         if result.shodan_result.vulns:
             lines.append(f"  Vulnerabilities: {len(result.shodan_result.vulns)}")
@@ -172,9 +172,7 @@ def run_scan(args: argparse.Namespace) -> None:
         console.print("[bold red]Configuration errors:[/bold red]")
         for e in errors:
             console.print(f"  \u2022 {e}")
-        console.print(
-            "\n[dim]Set API keys in .env file or use --no-api for local-only scanning[/dim]"
-        )
+        console.print("\n[dim]Set API keys in .env file or use --no-api for local-only scanning[/dim]")
         sys.exit(1)
 
     if not args.no_api and not args.shodan_only and not args.censys_only:
@@ -319,7 +317,10 @@ def cmd_search_family(args: argparse.Namespace) -> None:
     table.add_column("Port", style="cyan")
     for m in results:
         table.add_row(
-            m.ip, m.malware_family, m.threat_actor, m.description,
+            m.ip,
+            m.malware_family,
+            m.threat_actor,
+            m.description,
             str(m.port) if m.port else "-",
         )
     console.print(table)
@@ -344,7 +345,10 @@ def cmd_search_actor(args: argparse.Namespace) -> None:
     table.add_column("Port", style="cyan")
     for m in results:
         table.add_row(
-            m.ip, m.malware_family, m.threat_actor, m.description,
+            m.ip,
+            m.malware_family,
+            m.threat_actor,
+            m.description,
             str(m.port) if m.port else "-",
         )
     console.print(table)
@@ -477,6 +481,7 @@ def cmd_scan_file(args: argparse.Namespace) -> None:
 
     # For machine-readable output, send progress to stderr
     import sys as _sys
+
     progress_console = Console(file=_sys.stderr) if output_format else console
 
     def _scan_one(fp):
@@ -505,8 +510,9 @@ def cmd_scan_file(args: argparse.Namespace) -> None:
         _output_results(all_results, output_format)
     elif len(all_results) > 1:
         malicious = sum(1 for r in all_results if r.risk_label in ("MALICIOUS", "SUSPICIOUS"))
-        console.print(f"\n[bold]Scan complete: {len(all_results)} file(s) scanned, "
-                       f"{malicious} suspicious/malicious[/bold]")
+        console.print(
+            f"\n[bold]Scan complete: {len(all_results)} file(s) scanned, {malicious} suspicious/malicious[/bold]"
+        )
 
 
 def _output_results(results, fmt: str) -> None:
@@ -518,32 +524,58 @@ def _output_results(results, fmt: str) -> None:
     if fmt == "json":
         data = []
         for r in results:
-            data.append({
-                "path": r.path, "file_size": r.file_size, "md5": r.md5,
-                "sha256": r.sha256, "file_type": r.file_type, "entropy": r.entropy,
-                "risk_score": r.risk_score, "risk_label": r.risk_label,
-                "detected_families": r.detected_families,
-                "embedded_ips": r.embedded_ips, "embedded_domains": r.embedded_domains,
-                "suspicious_behaviors": r.suspicious_strings,
-                "indicators": r.indicators,
-            })
+            data.append(
+                {
+                    "path": r.path,
+                    "file_size": r.file_size,
+                    "md5": r.md5,
+                    "sha256": r.sha256,
+                    "file_type": r.file_type,
+                    "entropy": r.entropy,
+                    "risk_score": r.risk_score,
+                    "risk_label": r.risk_label,
+                    "detected_families": r.detected_families,
+                    "embedded_ips": r.embedded_ips,
+                    "embedded_domains": r.embedded_domains,
+                    "suspicious_behaviors": r.suspicious_strings,
+                    "indicators": r.indicators,
+                }
+            )
         print(_json.dumps(data, indent=2))
 
     elif fmt == "csv":
         buf = io.StringIO()
-        writer = csv.DictWriter(buf, fieldnames=[
-            "path", "file_size", "md5", "sha256", "file_type", "entropy",
-            "risk_score", "risk_label", "detected_families", "suspicious_behaviors",
-        ])
+        writer = csv.DictWriter(
+            buf,
+            fieldnames=[
+                "path",
+                "file_size",
+                "md5",
+                "sha256",
+                "file_type",
+                "entropy",
+                "risk_score",
+                "risk_label",
+                "detected_families",
+                "suspicious_behaviors",
+            ],
+        )
         writer.writeheader()
         for r in results:
-            writer.writerow({
-                "path": r.path, "file_size": r.file_size, "md5": r.md5,
-                "sha256": r.sha256, "file_type": r.file_type, "entropy": r.entropy,
-                "risk_score": r.risk_score, "risk_label": r.risk_label,
-                "detected_families": "|".join(r.detected_families),
-                "suspicious_behaviors": "|".join(r.suspicious_strings),
-            })
+            writer.writerow(
+                {
+                    "path": r.path,
+                    "file_size": r.file_size,
+                    "md5": r.md5,
+                    "sha256": r.sha256,
+                    "file_type": r.file_type,
+                    "entropy": r.entropy,
+                    "risk_score": r.risk_score,
+                    "risk_label": r.risk_label,
+                    "detected_families": "|".join(r.detected_families),
+                    "suspicious_behaviors": "|".join(r.suspicious_strings),
+                }
+            )
         print(buf.getvalue())
 
     elif fmt == "ioc":
@@ -568,12 +600,14 @@ def _output_results(results, fmt: str) -> None:
         table.add_column("Families", max_width=30)
         table.add_column("Behaviors", justify="right")
         for r in results:
-            label_colors = {"MALICIOUS": "bold red", "SUSPICIOUS": "yellow",
-                           "LOW RISK": "dim yellow", "CLEAN": "green"}
+            label_colors = {"MALICIOUS": "bold red", "SUSPICIOUS": "yellow", "LOW RISK": "dim yellow", "CLEAN": "green"}
             risk_text = Text(r.risk_label, style=label_colors.get(r.risk_label, "white"))
             table.add_row(
-                os.path.basename(r.path), risk_text, str(r.risk_score),
-                ", ".join(r.detected_families[:2]) or "-", str(len(r.suspicious_strings)),
+                os.path.basename(r.path),
+                risk_text,
+                str(r.risk_score),
+                ", ".join(r.detected_families[:2]) or "-",
+                str(len(r.suspicious_strings)),
             )
         console.print(table)
 
@@ -607,6 +641,7 @@ def cmd_update(args: argparse.Namespace) -> None:
         console.print(f"  Last updated: {stats['last_update']}")
     else:
         from db_updater import _load_cache
+
         cache = _load_cache()
         console.print(f"[yellow]Database is up to date (last update: {cache.get('last_update', 'never')})[/yellow]")
         console.print(f"  Online IOCs cached: {len(cache.get('ips', {}))}")
@@ -717,8 +752,7 @@ def _print_file_scan_result(result, verbose: bool = False) -> None:
     lines.append(f"[bold]MD5:[/bold] {result.md5}")
     lines.append(f"[bold]SHA256:[/bold] {result.sha256}")
     lines.append(
-        f"[bold]Risk:[/bold] [{label_style}]{result.risk_label} "
-        f"(score: {result.risk_score}/100)[/{label_style}]"
+        f"[bold]Risk:[/bold] [{label_style}]{result.risk_label} (score: {result.risk_score}/100)[/{label_style}]"
     )
 
     if result.pe_info:
@@ -817,12 +851,17 @@ def main() -> None:
     scan_parser = subparsers.add_parser("scan", help="Scan active network connections")
     scan_parser.add_argument("-m", "--monitor", action="store_true", help="Continuous monitoring mode")
     scan_parser.add_argument(
-        "-i", "--interval", type=int, default=30,
+        "-i",
+        "--interval",
+        type=int,
+        default=30,
         help="Monitoring interval in seconds (default: 30)",
     )
     scan_parser.add_argument("-f", "--filter-private", action="store_true", help="Exclude private/internal IPs")
     scan_parser.add_argument("-s", "--show-connections", action="store_true", help="Show all active connections")
-    scan_parser.add_argument("-a", "--show-all", action="store_true", help="Show results for all IPs (including LOW threat)")
+    scan_parser.add_argument(
+        "-a", "--show-all", action="store_true", help="Show results for all IPs (including LOW threat)"
+    )
     scan_parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     scan_parser.add_argument("--no-api", action="store_true", help="Skip API lookups (local analysis only)")
     scan_parser.add_argument("--shodan-only", action="store_true", help="Only use Shodan for lookups")
@@ -848,13 +887,20 @@ def main() -> None:
 
     scanfile_parser = subparsers.add_parser("scan-file", help="Scan files for malware signatures")
     scanfile_parser.add_argument("files", nargs="+", help="File paths or directories to scan")
-    scanfile_parser.add_argument("-v", "--verbose", action="store_true", help="Show embedded IPs, domains, and signatures")
     scanfile_parser.add_argument(
-        "-f", "--format", choices=["json", "csv", "ioc", "summary"],
+        "-v", "--verbose", action="store_true", help="Show embedded IPs, domains, and signatures"
+    )
+    scanfile_parser.add_argument(
+        "-f",
+        "--format",
+        choices=["json", "csv", "ioc", "summary"],
         help="Output format (default: rich table)",
     )
     scanfile_parser.add_argument(
-        "-j", "--jobs", type=int, default=1,
+        "-j",
+        "--jobs",
+        type=int,
+        default=1,
         help="Number of parallel scan workers (default: 1)",
     )
 

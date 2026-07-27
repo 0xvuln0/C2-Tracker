@@ -23,21 +23,35 @@ def _load_scoring_config() -> dict:
     yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scoring.yaml")
     defaults = {
         "behavior_tiers": {15: 40, 10: 30, 7: 22, 4: 15, 2: 8, 1: 4},
-        "shellcode_per_hit": 2, "shellcode_max": 15,
-        "anti_analysis_per_hit": 3, "anti_analysis_max": 15,
-        "entropy_high": 4, "entropy_very_high": 4,
-        "embedded_ip_per": 1, "embedded_ip_max": 4,
-        "family_log_scale": 15, "family_max": 20,
-        "signature_log_scale": 5, "signature_max": 10,
-        "high_conf_family_scale": 8, "high_conf_family_max": 10,
-        "mimikatz": 12, "meterpreter": 8, "reverse_shell": 6,
-        "memory_ops": 6, "persistence": 5, "defense_evasion": 6,
-        "webshell": 8, "elf_indicators_per_hit": 2, "elf_indicators_max": 8,
+        "shellcode_per_hit": 2,
+        "shellcode_max": 15,
+        "anti_analysis_per_hit": 3,
+        "anti_analysis_max": 15,
+        "entropy_high": 4,
+        "entropy_very_high": 4,
+        "embedded_ip_per": 1,
+        "embedded_ip_max": 4,
+        "family_log_scale": 15,
+        "family_max": 20,
+        "signature_log_scale": 5,
+        "signature_max": 10,
+        "high_conf_family_scale": 8,
+        "high_conf_family_max": 10,
+        "mimikatz": 12,
+        "meterpreter": 8,
+        "reverse_shell": 6,
+        "memory_ops": 6,
+        "persistence": 5,
+        "defense_evasion": 6,
+        "webshell": 8,
+        "elf_indicators_per_hit": 2,
+        "elf_indicators_max": 8,
         "small_elf_shellcode": 8,
         "thresholds": {"malicious": 70, "suspicious": 40, "low_risk": 20},
     }
     try:
         import yaml
+
         with open(yaml_path) as f:
             cfg = yaml.safe_load(f)
         s = cfg.get("scoring", {})
@@ -56,6 +70,7 @@ def _load_scoring_config() -> dict:
 @dataclass
 class FileScanResult:
     """Result of scanning a single file."""
+
     path: str
     file_size: int = 0
     md5: str = ""
@@ -362,7 +377,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"nc\s+-l\s+-p\s+\d+", "Netcat listener"),
     (r"socat\s+tcp:", "Socat reverse shell"),
     (r"mknod.*b.*666", "Device node creation (FUDGI)"),
-
     # --- Metasploit / msfvenom ---
     (r"windows/meterpreter", "Meterpreter payload"),
     (r"windows/shell", "Windows shell payload"),
@@ -394,7 +408,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"LHOST=", "LHOST parameter (Metasploit)"),
     (r"AutoRunScript", "Metasploit AutoRunScript"),
     (r"SESSION=", "Metasploit session reference"),
-
     # --- Shellcode / Assembly ---
     (r"\\x90\\x90\\x90\\x90", "NOP sled (NOP x4)"),
     (r"\x90\x90\x90\x90", "NOP sled (binary)"),
@@ -407,7 +420,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"\\xcd\\x80", "INT 0x80 syscall (x86 Linux)"),
     (r"\\x0f\\x05", "SYSCALL instruction (x64)"),
     (r"\\xcc", "INT3 breakpoint"),
-
     # --- PowerShell ---
     (r"powershell.*-enc\s+[A-Za-z0-9+/=]{20,}", "Encoded PowerShell command"),
     (r"powershell.*-w\s+hidden", "Hidden PowerShell window"),
@@ -428,7 +440,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"Invoke-PowerShellIcmp", "Nishang ICMP shell"),
     (r"Invoke-CredentialInjection", "Credential injection"),
     (r"Invoke-PSRemoting", "PS Remoting exploitation"),
-
     # --- Credential Access ---
     (r"mimikatz", "Mimikatz credential tool"),
     (r"sekurlsa::logonpasswords", "Mimikatz logon dump"),
@@ -447,7 +458,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"rundll32.*comsvcs", "LSASS dump via rundll32"),
     (r"pypykatz", "Python mimikatz"),
     (r"crackmapexec", "CrackMapExec"),
-
     # --- Execution ---
     (r"cmd\.exe\s+/c.*&&", "Chained CMD commands"),
     (r"cmd\.exe\s+/c.*\|", "CMD pipe execution"),
@@ -470,7 +480,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"msbuild.*\/t:", "MSBuild code execution"),
     (r"regasm.*\/logfile", "RegAsm execution"),
     (r"regsvcs.*\/logfile", "RegSvcs execution"),
-
     # --- Persistence ---
     (r"reg\s+add.*\\Run", "Registry autorun entry"),
     (r"reg\s+add.*\\RunOnce", "Registry RunOnce entry"),
@@ -483,7 +492,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"\\\\Startup\\\\", "Startup folder path"),
     (r"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run", "HKLM Run key"),
     (r"HKCU\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run", "HKCU Run key"),
-
     # --- Privilege Escalation ---
     (r"sudo\s+chmod\s+[47]", "SUID/SGID binary creation"),
     (r"chmod\s+[47]\d{2}\s+/bin/", "SUID shell"),
@@ -494,7 +502,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"Set-ItemProperty.*RunAs", "RunAs persistence"),
     (r"New-LocalUser", "Local user creation"),
     (r"Add-LocalGroupMember", "Group member addition"),
-
     # --- Defense Evasion ---
     (r"Add-MpPreference.*-ExclusionPath", "Windows Defender exclusion"),
     (r"Set-MpPreference.*-DisableRealtimeMonitoring", "Disabling Windows Defender"),
@@ -515,14 +522,12 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"unhook.*ntdll", "Unhooking ntdll"),
     (r"EatHook", "EAT hooking"),
     (r"IatHook", "IAT hooking"),
-
     # --- Lateral Movement ---
     (r"Invoke-WMIMethod.*Win32_Process.*Create", "WMI remote execution"),
     (r"Invoke-Command.*-ComputerName", "PowerShell remoting"),
     (r"psexec.*\\\\", "PsExec remote execution"),
     (r"wmic.*\/node:.*process", "WMI remote process"),
     (r"Enter-PSSession", "PowerShell remote session"),
-
     # --- Data Exfiltration ---
     (r"ftp.*-s:", "FTP staging"),
     (r"tftp.*-i", "TFTP transfer"),
@@ -531,7 +536,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"Invoke-RestMethod.*-Method\s+Post", "PowerShell HTTP POST"),
     (r"Invoke-RestMethod.*-Uri.*\/api", "PowerShell API call"),
     (r"Invoke-WebRequest.*-Method\s+Post", "PowerShell web POST"),
-
     # --- C2 / RAT Indicators ---
     (r"New-Object.*Net\.Sockets\.TCPClient", "TCP reverse shell"),
     (r"New-Object.*Net\.Sockets\.UDPClient", "UDP reverse shell"),
@@ -573,7 +577,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"OutputDebugString", "Anti-debug check"),
     (r"SleepEx", "Anti-sandbox SleepEx"),
     (r"NtDelayExecution", "NtDelayExecution"),
-
     # --- Linux specific ---
     (r"\/bin\/sh\s+-c", "Shell execution"),
     (r"\/bin\/bash\s+-c", "Bash execution"),
@@ -593,7 +596,6 @@ SUSPICIOUS_PATTERNS: list[tuple[str, str]] = [
     (r"python3.*-c.*socket", "Python3 socket execution"),
     (r"perl.*-e.*socket", "Perl socket execution"),
     (r"ruby.*-e.*socket", "Ruby socket execution"),
-
     # --- Web shells ---
     (r"eval\s*\(\$_(GET|POST|REQUEST|COOKIE)", "PHP web shell eval"),
     (r"assert\s*\(\$_(GET|POST|REQUEST|COOKIE)", "PHP web shell assert"),
@@ -630,125 +632,106 @@ KNOWN_MALICIOUS_IP_PATTERNS: list[str] = [
 BINARY_FAMILY_SIGNATURES: list[tuple[bytes, str, str, int]] = [
     # --- Linux shellcode families ---
     # Generic Linux reverse shell
-    (b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05",
-     "Linux Reverse Shell", "Generic Linux x64 reverse shell (socket/connect)", 80),
+    (
+        b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05",
+        "Linux Reverse Shell",
+        "Generic Linux x64 reverse shell (socket/connect)",
+        80,
+    ),
     # execve /bin/sh shellcode
-    (b"\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68",
-     "Linux Shellcode", "execve /bin/sh shellcode", 85),
+    (b"\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68", "Linux Shellcode", "execve /bin/sh shellcode", 85),
     # setuid(0) + execve /bin/sh
-    (b"\x48\x31\xff\x6a\x09\x58\x0f\x05",
-     "Privilege Escalation Shellcode", "setuid(0) shellcode", 75),
+    (b"\x48\x31\xff\x6a\x09\x58\x0f\x05", "Privilege Escalation Shellcode", "setuid(0) shellcode", 75),
     # dup2 shellcode (redirecting stdin/stdout/stderr)
-    (b"\x48\x31\xc0\x48\x31\xff\xb8\x21\x00\x00\x00",
-     "Shellcode dup2", "File descriptor duplication shellcode", 70),
+    (b"\x48\x31\xc0\x48\x31\xff\xb8\x21\x00\x00\x00", "Shellcode dup2", "File descriptor duplication shellcode", 70),
     # connect-back shellcode with hardcoded IP
-    (b"\x02\x00\x11\x5c",
-     "Reverse Shell C2", "Port 4444 connect-back shellcode", 90),
-
+    (b"\x02\x00\x11\x5c", "Reverse Shell C2", "Port 4444 connect-back shellcode", 90),
     # --- Metasploit signatures ---
     # msfvenom Linux x64 reverse shell
-    (b"\x48\x31\xc0\x48\x31\xff\x48\x31\xf6\x48\x31\xd2\x48\x31\xc9\x48\x31\xdb\x48\x31\xc0\x50\x48\x31\xc0",
-     "Metasploit", "Metasploit-generated shellcode (Linux x64)", 90),
+    (
+        b"\x48\x31\xc0\x48\x31\xff\x48\x31\xf6\x48\x31\xd2\x48\x31\xc9\x48\x31\xdb\x48\x31\xc0\x50\x48\x31\xc0",
+        "Metasploit",
+        "Metasploit-generated shellcode (Linux x64)",
+        90,
+    ),
     # msfvenom Windows reverse shell
-    (b"\xfc\xe8\x82\x00\x00\x00\x60\x89\xe5\x31\xd2",
-     "Metasploit", "Metasploit-generated shellcode (Windows)", 90),
+    (b"\xfc\xe8\x82\x00\x00\x00\x60\x89\xe5\x31\xd2", "Metasploit", "Metasploit-generated shellcode (Windows)", 90),
     # msfvenom windows/meterpreter/reverse_tcp
-    (b"\xfc\xe8\x89\x00\x00\x00\x60\x89\xe5\x31\xd2",
-     "Metasploit Meterpreter", "Metasploit Meterpreter shellcode", 95),
-
+    (b"\xfc\xe8\x89\x00\x00\x00\x60\x89\xe5\x31\xd2", "Metasploit Meterpreter", "Metasploit Meterpreter shellcode", 95),
     # --- Cobalt Strike ---
     # Cobalt Strike beacon x64
-    (b"\x48\x89\x5c\x24\x08\x48\x89\x6c\x24\x10\x48\x89\x74\x24\x18",
-     "Cobalt Strike", "Cobalt Strike Beacon (x64 prologue)", 85),
+    (
+        b"\x48\x89\x5c\x24\x08\x48\x89\x6c\x24\x10\x48\x89\x74\x24\x18",
+        "Cobalt Strike",
+        "Cobalt Strike Beacon (x64 prologue)",
+        85,
+    ),
     # Cobalt Strike beacon x86
-    (b"\x55\x8b\xec\x83\xec\x0c\x53\x56\x57",
-     "Cobalt Strike", "Cobalt Strike Beacon (x86 prologue)", 80),
-
+    (b"\x55\x8b\xec\x83\xec\x0c\x53\x56\x57", "Cobalt Strike", "Cobalt Strike Beacon (x86 prologue)", 80),
     # --- Sliver ---
     # Sliver implant pattern
-    (b"\x48\x8b\x0c\x24\x48\x89\x4c\x24\x08",
-     "Sliver", "Sliver implant pattern", 75),
-
+    (b"\x48\x8b\x0c\x24\x48\x89\x4c\x24\x08", "Sliver", "Sliver implant pattern", 75),
     # --- Mirai Botnet ---
     # Mirai propagation pattern
-    (b"/bin/busybox",
-     "Mirai Botnet", "Mirai botnet binary", 85),
+    (b"/bin/busybox", "Mirai Botnet", "Mirai botnet binary", 85),
     # Mirai module names (from leaked source)
-    (b"scanner_init",
-     "Mirai Botnet", "Mirai scanner module", 90),
-    (b"killer_init",
-     "Mirai Botnet", "Mirai killer module", 90),
-    (b"reporter_init",
-     "Mirai Botnet", "Mirai reporter module", 90),
+    (b"scanner_init", "Mirai Botnet", "Mirai scanner module", 90),
+    (b"killer_init", "Mirai Botnet", "Mirai killer module", 90),
+    (b"reporter_init", "Mirai Botnet", "Mirai reporter module", 90),
     # Mirai-specific string constants
-    (b"KILLATONEDIE",
-     "Mirai Botnet", "Mirai kill-on-exit string", 95),
+    (b"KILLATONEDIE", "Mirai Botnet", "Mirai kill-on-exit string", 95),
     # Mirai default credentials scanning
-    (b"GET /cdn-cgi/",
-     "Mirai Botnet", "Mirai Cloudflare bypass pattern", 85),
-
+    (b"GET /cdn-cgi/", "Mirai Botnet", "Mirai Cloudflare bypass pattern", 85),
     # --- Reverse Shell Families ---
     # Python reverse shell
-    (b"\x48\x89\xe7\x48\x31\xf6\x48\x31\xd2\x6a\x3b\x58\x0f\x05",
-     "Python Reverse Shell", "Python-based reverse shell shellcode", 85),
+    (
+        b"\x48\x89\xe7\x48\x31\xf6\x48\x31\xd2\x6a\x3b\x58\x0f\x05",
+        "Python Reverse Shell",
+        "Python-based reverse shell shellcode",
+        85,
+    ),
     # Netcat reverse shell
-    (b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05",
-     "Netcat Reverse Shell", "Netcat-style reverse shell", 80),
+    (b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05", "Netcat Reverse Shell", "Netcat-style reverse shell", 80),
     # Bash reverse shell
-    (b"\x6a\x3b\x58\x99\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68",
-     "Bash Reverse Shell", "execve /bin/sh reverse shell", 85),
-
+    (
+        b"\x6a\x3b\x58\x99\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68",
+        "Bash Reverse Shell",
+        "execve /bin/sh reverse shell",
+        85,
+    ),
     # --- Ransomware ---
     # LockBit 3.0 patterns
-    (b"\x2e\x6c\x6f\x63\x6b\x62\x69\x74",
-     "LockBit 3.0", "LockBit ransomware identifier", 90),
+    (b"\x2e\x6c\x6f\x63\x6b\x62\x69\x74", "LockBit 3.0", "LockBit ransomware identifier", 90),
     # Conti ransomware patterns
-    (b"\x63\x6f\x6e\x74\x69\x2e\x65\x78\x65",
-     "Conti", "Conti ransomware binary", 85),
+    (b"\x63\x6f\x6e\x74\x69\x2e\x65\x78\x65", "Conti", "Conti ransomware binary", 85),
     # REvil/Sodinokibi patterns
-    (b"\x72\x65\x76\x69\x6c",
-     "REvil", "REvil/Sodinokibi ransomware", 80),
-
+    (b"\x72\x65\x76\x69\x6c", "REvil", "REvil/Sodinokibi ransomware", 80),
     # --- RAT Families ---
     # AsyncRAT pattern
-    (b"\x41\x73\x79\x6e\x63\x72\x61\x74",
-     "AsyncRAT", "AsyncRAT implant", 80),
+    (b"\x41\x73\x79\x6e\x63\x72\x61\x74", "AsyncRAT", "AsyncRAT implant", 80),
     # njRAT pattern
-    (b"\x6e\x6a\x52\x41\x54",
-     "njRAT", "njRAT implant", 75),
+    (b"\x6e\x6a\x52\x41\x54", "njRAT", "njRAT implant", 75),
     # Remcos pattern
-    (b"\x72\x65\x6d\x63\x6f\x73",
-     "Remcos", "Remcos RAT implant", 75),
-
+    (b"\x72\x65\x6d\x63\x6f\x73", "Remcos", "Remcos RAT implant", 75),
     # --- Banking Trojans ---
     # Emotet pattern
-    (b"\x65\x6d\x6f\x74\x65\x74",
-     "Emotet", "Emotet banking trojan", 80),
+    (b"\x65\x6d\x6f\x74\x65\x74", "Emotet", "Emotet banking trojan", 80),
     # TrickBot pattern
-    (b"\x74\x72\x69\x63\x6b\x62\x6f\x74",
-     "TrickBot", "TrickBot banking trojan", 80),
+    (b"\x74\x72\x69\x63\x6b\x62\x6f\x74", "TrickBot", "TrickBot banking trojan", 80),
     # Dridex pattern
-    (b"\x64\x72\x69\x64\x65\x78",
-     "Dridex", "Dridex banking trojan", 75),
-
+    (b"\x64\x72\x69\x64\x65\x78", "Dridex", "Dridex banking trojan", 75),
     # --- Info Stealers ---
     # RedLine Stealer
-    (b"\x52\x65\x64\x4c\x69\x6e\x65",
-     "RedLine Stealer", "RedLine infostealer", 80),
+    (b"\x52\x65\x64\x4c\x69\x6e\x65", "RedLine Stealer", "RedLine infostealer", 80),
     # Raccoon Stealer
-    (b"\x52\x61\x63\x63\x6f\x6f\x6e",
-     "Raccoon Stealer", "Raccoon infostealer", 75),
+    (b"\x52\x61\x63\x63\x6f\x6f\x6e", "Raccoon Stealer", "Raccoon infostealer", 75),
     # Vidar Stealer
-    (b"\x56\x69\x64\x61\x72",
-     "Vidar Stealer", "Vidar infostealer", 75),
-
+    (b"\x56\x69\x64\x61\x72", "Vidar Stealer", "Vidar infostealer", 75),
     # --- Worms ---
     # Conficker pattern
-    (b"\x63\x6f\x6e\x66\x69\x63\x6b\x65\x72",
-     "Conficker", "Conficker worm", 80),
-    #震网 Stuxnet pattern
-    (b"\x73\x74\x75\x78\x6e\x65\x74",
-     "Stuxnet", "Stuxnet worm", 85),
+    (b"\x63\x6f\x6e\x66\x69\x63\x6b\x65\x72", "Conficker", "Conficker worm", 80),
+    # 震网 Stuxnet pattern
+    (b"\x73\x74\x75\x78\x6e\x65\x74", "Stuxnet", "Stuxnet worm", 85),
 ]
 
 # Learning database path
@@ -833,11 +816,21 @@ class LearningDB:
         # Extract unique 8-byte sequences that appear in shellcode
         seen_patterns = set()
         for i in range(0, min(len(data) - 8, 100000), 4):
-            chunk = data[i:i + 8]
+            chunk = data[i : i + 8]
             # Only record patterns that look like shellcode (contain syscalls, XORs, etc.)
-            if any(sig in chunk for sig in [b"\x0f\x05", b"\xcd\x80", b"\x31\xc0",
-                                            b"\x31\xc9", b"\x31\xd2", b"\x6a\x29",
-                                            b"\x6a\x2a", b"\x6a\x3b"]):
+            if any(
+                sig in chunk
+                for sig in [
+                    b"\x0f\x05",
+                    b"\xcd\x80",
+                    b"\x31\xc0",
+                    b"\x31\xc9",
+                    b"\x31\xd2",
+                    b"\x6a\x29",
+                    b"\x6a\x2a",
+                    b"\x6a\x3b",
+                ]
+            ):
                 pattern_hex = chunk.hex()
                 if pattern_hex not in seen_patterns:
                     seen_patterns.add(pattern_hex)
@@ -869,7 +862,7 @@ class LearningDB:
             return list(similar)
 
         for i in range(0, min(len(data) - 8, 100000), 4):
-            chunk = data[i:i + 8]
+            chunk = data[i : i + 8]
             pattern_hex = chunk.hex()
             if pattern_hex in self.data["byte_patterns"]:
                 info = self.data["byte_patterns"][pattern_hex]
@@ -1000,27 +993,122 @@ def extract_ips_from_strings(strings: list[str]) -> list[str]:
 def extract_domains_from_strings(strings: list[str]) -> list[str]:
     """Extract domains from string data."""
     VALID_TLDS = {
-        "com", "net", "org", "io", "co", "info", "biz", "xyz", "top", "site",
-        "online", "store", "tech", "dev", "app", "me", "cc", "ws", "su",
-        "ru", "cn", "de", "uk", "fr", "jp", "br", "in", "au", "nl", "it",
-        "es", "se", "no", "dk", "fi", "pl", "cz", "at", "ch", "be", "pt",
-        "gov", "edu", "mil", "int", "onion", "bit", "tk", "ml", "ga", "cf",
-        "gq", "pw", "to", "sh", "ch", "ly", "la", "im", "fm", "gg",
+        "com",
+        "net",
+        "org",
+        "io",
+        "co",
+        "info",
+        "biz",
+        "xyz",
+        "top",
+        "site",
+        "online",
+        "store",
+        "tech",
+        "dev",
+        "app",
+        "me",
+        "cc",
+        "ws",
+        "su",
+        "ru",
+        "cn",
+        "de",
+        "uk",
+        "fr",
+        "jp",
+        "br",
+        "in",
+        "au",
+        "nl",
+        "it",
+        "es",
+        "se",
+        "no",
+        "dk",
+        "fi",
+        "pl",
+        "cz",
+        "at",
+        "ch",
+        "be",
+        "pt",
+        "gov",
+        "edu",
+        "mil",
+        "int",
+        "onion",
+        "bit",
+        "tk",
+        "ml",
+        "ga",
+        "cf",
+        "gq",
+        "pw",
+        "to",
+        "sh",
+        "ch",
+        "ly",
+        "la",
+        "im",
+        "fm",
+        "gg",
     }
     # Exclude ELF section names, Python attributes, and other non-domains
     ELF_SECTIONS = {
-        ".text", ".data", ".bss", ".rodata", ".plt", ".got", ".plt.got",
-        ".init", ".fini", ".dynamic", ".dynsym", ".dynstr", ".rela",
-        ".gnu", ".note", ".comment", ".debug", ".eh_frame", ".gcc_except",
-        ".ctors", ".dtors", ".tbss", ".tdata", ".init_array", ".fini_array",
-        ".jcr", ".got.plt", ".init_array", ".fini_array",
+        ".text",
+        ".data",
+        ".bss",
+        ".rodata",
+        ".plt",
+        ".got",
+        ".plt.got",
+        ".init",
+        ".fini",
+        ".dynamic",
+        ".dynsym",
+        ".dynstr",
+        ".rela",
+        ".gnu",
+        ".note",
+        ".comment",
+        ".debug",
+        ".eh_frame",
+        ".gcc_except",
+        ".ctors",
+        ".dtors",
+        ".tbss",
+        ".tdata",
+        ".init_array",
+        ".fini_array",
+        ".jcr",
+        ".got.plt",
+        ".init_array",
+        ".fini_array",
     }
     PYTHON_ATTRS = {
-        "client.send", "client.connect", "client.recv", "client.close",
-        "s.send", "s.connect", "s.recv", "s.close", "s.settimeout",
-        "os.system", "os.popen", "os.path", "sys.exit", "sys.argv",
-        "subprocess.call", "subprocess.Popen", "socket.socket",
-        "threading.Thread", "time.sleep", "re.search", "re.match",
+        "client.send",
+        "client.connect",
+        "client.recv",
+        "client.close",
+        "s.send",
+        "s.connect",
+        "s.recv",
+        "s.close",
+        "s.settimeout",
+        "os.system",
+        "os.popen",
+        "os.path",
+        "sys.exit",
+        "sys.argv",
+        "subprocess.call",
+        "subprocess.Popen",
+        "socket.socket",
+        "threading.Thread",
+        "time.sleep",
+        "re.search",
+        "re.match",
     }
     domain_pattern = re.compile(r"\b([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,})\b")
     found_domains = set()
@@ -1058,11 +1146,11 @@ def check_pe_info(data: bytes) -> dict:
         pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
         if pe_offset + 4 >= len(data):
             return info
-        if data[pe_offset:pe_offset + 4] != b"PE\x00\x00":
+        if data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
             return info
 
         machine = struct.unpack_from("<H", data, pe_offset + 4)[0]
-        machines = {0x14c: "x86", 0x8664: "x86_64", 0xAA64: "ARM64"}
+        machines = {0x14C: "x86", 0x8664: "x86_64", 0xAA64: "ARM64"}
         info["machine"] = machines.get(machine, f"0x{machine:x}")
 
         num_sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
@@ -1071,6 +1159,7 @@ def check_pe_info(data: bytes) -> dict:
         timestamp = struct.unpack_from("<I", data, pe_offset + 8)[0]
         if timestamp > 0:
             from datetime import datetime
+
             try:
                 info["timestamp"] = datetime.utcfromtimestamp(timestamp).isoformat()
             except (OSError, OverflowError):
@@ -1079,7 +1168,7 @@ def check_pe_info(data: bytes) -> dict:
         _opt_header_size = struct.unpack_from("<H", data, pe_offset + 20)[0]
         opt_start = pe_offset + 24
         magic = struct.unpack_from("<H", data, opt_start)[0]
-        if magic == 0x20b:
+        if magic == 0x20B:
             info["format"] = "PE32+"
         else:
             info["format"] = "PE32"
@@ -1100,7 +1189,7 @@ def check_elf_info(data: bytes) -> dict:
 
     try:
         ei_class = data[4]  # 1 = 32-bit, 2 = 64-bit
-        ei_data = data[5]   # 1 = little-endian, 2 = big-endian
+        ei_data = data[5]  # 1 = little-endian, 2 = big-endian
 
         if ei_class == 2 and ei_data == 1:  # 64-bit little-endian
             e_type = struct.unpack_from("<H", data, 16)[0]
@@ -1113,8 +1202,7 @@ def check_elf_info(data: bytes) -> dict:
             e_phnum = struct.unpack_from("<H", data, 56)[0]
             e_shnum = struct.unpack_from("<H", data, 60)[0]
 
-            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)",
-                         3: "DYN (shared object)", 4: "CORE"}
+            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)", 3: "DYN (shared object)", 4: "CORE"}
             info["type"] = type_names.get(e_type, f"0x{e_type:x}")
             info["entry"] = f"0x{e_entry:x}"
             info["sections"] = e_shnum
@@ -1134,8 +1222,7 @@ def check_elf_info(data: bytes) -> dict:
             _e_shoff = struct.unpack_from("<I", data, 32)[0]
             e_shnum = struct.unpack_from("<H", data, 48)[0]
 
-            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)",
-                         3: "DYN (shared object)", 4: "CORE"}
+            type_names = {1: "REL (relocatable)", 2: "EXEC (executable)", 3: "DYN (shared object)", 4: "CORE"}
             info["type"] = type_names.get(e_type, f"0x{e_type:x}")
             info["entry"] = f"0x{e_entry:x}"
             info["sections"] = e_shnum
@@ -1206,7 +1293,7 @@ def detect_binary_patterns(data: bytes) -> tuple[list[str], list[tuple[str, str,
     # PUSH rax; POP rdi (common shellcode pattern)
     push_pop_count = 0
     for i in range(len(data) - 2):
-        if data[i] == 0x50 and data[i + 2] == 0x5f:  # push rax; ... pop rdi
+        if data[i] == 0x50 and data[i + 2] == 0x5F:  # push rax; ... pop rdi
             push_pop_count += 1
     if push_pop_count >= 2:
         patterns.append(f"PUSH/POP register sequence ({push_pop_count}x)")
@@ -1241,13 +1328,13 @@ def detect_binary_patterns(data: bytes) -> tuple[list[str], list[tuple[str, str,
     # --- Encoded IP/port detection ---
     # Look for common port patterns (little-endian 2 bytes after PUSH)
     common_ports = {
-        b"\x5c\x11": 4444,    # port 4444
-        b"\xbb\x01": 443,     # port 443
-        b"\x50\x00": 80,      # port 80
-        b"\x1f\x90": 34567,   # port 34567
-        b"\x39\x05": 1337,    # port 1337
-        b"\x0d\xbb": 44444,   # port 44444
-        b"\x15\x53": 21298,   # port 21298
+        b"\x5c\x11": 4444,  # port 4444
+        b"\xbb\x01": 443,  # port 443
+        b"\x50\x00": 80,  # port 80
+        b"\x1f\x90": 34567,  # port 34567
+        b"\x39\x05": 1337,  # port 1337
+        b"\x0d\xbb": 44444,  # port 44444
+        b"\x15\x53": 21298,  # port 21298
     }
     for pattern, port in common_ports.items():
         if pattern in data:
@@ -1255,20 +1342,18 @@ def detect_binary_patterns(data: bytes) -> tuple[list[str], list[tuple[str, str,
             break
 
     # Detect IP addresses in network byte order (big-endian)
-    ip_pattern = re.compile(
-        rb"\x02\x00([\x00-\xff]{2})([\x00-\xff]{2})\x51"
-    )
+    ip_pattern = re.compile(rb"\x02\x00([\x00-\xff]{2})([\x00-\xff]{2})\x51")
     match = ip_pattern.search(data)
     if match:
-        ip_bytes = data[match.start() + 2:match.start() + 6]
+        ip_bytes = data[match.start() + 2 : match.start() + 6]
         ip_int = struct.unpack("!I", ip_bytes)[0]
-        ip_str = f"{(ip_int >> 24) & 0xff}.{(ip_int >> 16) & 0xff}.{(ip_int >> 8) & 0xff}.{ip_int & 0xff}"
+        ip_str = f"{(ip_int >> 24) & 0xFF}.{(ip_int >> 16) & 0xFF}.{(ip_int >> 8) & 0xFF}.{ip_int & 0xFF}"
         patterns.append(f"Encoded IP address: {ip_str}")
 
     # Also try to find IPs as 4 consecutive bytes that look like private/public IPs
     for i in range(len(data) - 3):
-        if data[i] == 0xc0 and data[i + 1] == 0xa8:  # 192.168.x.x
-            patterns.append(f"Private IP 192.168.{data[i+2]}.{data[i+3]} detected")
+        if data[i] == 0xC0 and data[i + 1] == 0xA8:  # 192.168.x.x
+            patterns.append(f"Private IP 192.168.{data[i + 2]}.{data[i + 3]} detected")
             break
 
     return patterns, family_matches
@@ -1302,7 +1387,7 @@ def detect_elf_anomalies(data: bytes) -> list[str]:
         if elf_info.get("entry"):
             entry_addr = int(elf_info["entry"], 16)
             if entry_addr < len(data) - 10:
-                entry_bytes = data[entry_addr:entry_addr + 16]
+                entry_bytes = data[entry_addr : entry_addr + 16]
                 entry_str = entry_bytes.hex()
     except (ValueError, IndexError):
         pass
@@ -1339,21 +1424,33 @@ def analyze_unusual_behavior(data: bytes, result: FileScanResult) -> list[str]:
     if data[:2] == b"MZ" and len(data) > 100:
         try:
             pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
-            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+            if pe_offset + 4 <= len(data) and data[pe_offset : pe_offset + 4] == b"PE\x00\x00":
                 num_sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
                 section_start = pe_offset + 24 + struct.unpack_from("<H", data, pe_offset + 20)[0]
                 for i in range(min(num_sections, 20)):
                     offset = section_start + (i * 40)
                     if offset + 40 > len(data):
                         break
-                    name = data[offset:offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
+                    name = data[offset : offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
                     if name:
                         # Known suspicious section names
                         sus_sections = {
-                            ".vmp", ".themida", ".enigma", ".packing",
-                            ".aspack", ".adata", ".packed", ".RLPack",
-                            ".MPRESS1", ".MPRESS2", ".petite", ".yP",
-                            ".UPX0", ".UPX1", ".UPX2", ".UPX!",
+                            ".vmp",
+                            ".themida",
+                            ".enigma",
+                            ".packing",
+                            ".aspack",
+                            ".adata",
+                            ".packed",
+                            ".RLPack",
+                            ".MPRESS1",
+                            ".MPRESS2",
+                            ".petite",
+                            ".yP",
+                            ".UPX0",
+                            ".UPX1",
+                            ".UPX2",
+                            ".UPX!",
                         }
                         if name in sus_sections:
                             findings.append(f"Suspicious PE section: {name} (possible packing)")
@@ -1532,7 +1629,7 @@ def analyze_unusual_behavior(data: bytes, result: FileScanResult) -> list[str]:
         # Check for very few imports (possible manual import loading)
         try:
             pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
-            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+            if pe_offset + 4 <= len(data) and data[pe_offset : pe_offset + 4] == b"PE\x00\x00":
                 # Look for LoadLibrary/GetProcAddress (manual import loading)
                 manual_import = [b"LoadLibraryA", b"LoadLibraryW", b"GetProcAddress"]
                 manual_count = sum(1 for m in manual_import if m in data)
@@ -1549,14 +1646,14 @@ def analyze_unusual_behavior(data: bytes, result: FileScanResult) -> list[str]:
     if data[:2] == b"MZ" and len(data) > 1000:
         try:
             pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
-            if pe_offset + 4 <= len(data) and data[pe_offset:pe_offset + 4] == b"PE\x00\x00":
+            if pe_offset + 4 <= len(data) and data[pe_offset : pe_offset + 4] == b"PE\x00\x00":
                 num_sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
                 section_start = pe_offset + 24 + struct.unpack_from("<H", data, pe_offset + 20)[0]
                 for i in range(min(num_sections, 20)):
                     offset = section_start + (i * 40)
                     if offset + 40 > len(data):
                         break
-                    name = data[offset:offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
+                    name = data[offset : offset + 8].rstrip(b"\x00").decode("ascii", errors="ignore")
                     raw_size = struct.unpack_from("<I", data, offset + 16)[0]
                     if name in (".text", ".code") and raw_size > len(data) * 0.8:
                         findings.append(f"Section {name} contains most of file (possible overlay)")
@@ -1713,28 +1810,38 @@ def scan_file(file_path: str) -> FileScanResult:
 
     # Shellcode indicators
     shellcode_indicators = [
-        "Linux x86-64 syscall", "INT 0x80", "XOR EAX,EAX",
-        "Socket syscall", "Connect syscall", "NOP sled",
-        "Encoded port", "Encoded IP", "JMP/POP pattern",
-        "shellcode loader", "Executable ELF without section",
+        "Linux x86-64 syscall",
+        "INT 0x80",
+        "XOR EAX,EAX",
+        "Socket syscall",
+        "Connect syscall",
+        "NOP sled",
+        "Encoded port",
+        "Encoded IP",
+        "JMP/POP pattern",
+        "shellcode loader",
+        "Executable ELF without section",
     ]
-    shellcode_hits = sum(1 for si in shellcode_indicators
-                         if any(si in s for s in result.suspicious_strings))
-    score += min(shellcode_hits * cfg.get("shellcode_per_hit", 2),
-                 cfg.get("shellcode_max", 15))
+    shellcode_hits = sum(1 for si in shellcode_indicators if any(si in s for s in result.suspicious_strings))
+    score += min(shellcode_hits * cfg.get("shellcode_per_hit", 2), cfg.get("shellcode_max", 15))
 
     # Anti-analysis indicators
     anti_analysis_indicators = [
-        "Anti-analysis:", "Anti-VM:", "Anti-sandbox:", "Obfuscation:",
-        "Suspicious PE section:", "Double extension", "Manual import loading",
-        "very few readable strings", "executable+writable",
-        "IsDebuggerPresent", "NtQueryInformationProcess",
+        "Anti-analysis:",
+        "Anti-VM:",
+        "Anti-sandbox:",
+        "Obfuscation:",
+        "Suspicious PE section:",
+        "Double extension",
+        "Manual import loading",
+        "very few readable strings",
+        "executable+writable",
+        "IsDebuggerPresent",
+        "NtQueryInformationProcess",
         "CheckRemoteDebuggerPresent",
     ]
-    anti_hits = sum(1 for ai in anti_analysis_indicators
-                    if any(ai in s for s in result.suspicious_strings))
-    score += min(anti_hits * cfg.get("anti_analysis_per_hit", 3),
-                 cfg.get("anti_analysis_max", 15))
+    anti_hits = sum(1 for ai in anti_analysis_indicators if any(ai in s for s in result.suspicious_strings))
+    score += min(anti_hits * cfg.get("anti_analysis_per_hit", 3), cfg.get("anti_analysis_max", 15))
 
     # Entropy
     if result.entropy > 7.0:
@@ -1744,23 +1851,27 @@ def scan_file(file_path: str) -> FileScanResult:
 
     # Embedded IPs
     if result.embedded_ips:
-        score += min(len(result.embedded_ips) * cfg.get("embedded_ip_per", 1),
-                     cfg.get("embedded_ip_max", 4))
+        score += min(len(result.embedded_ips) * cfg.get("embedded_ip_per", 1), cfg.get("embedded_ip_max", 4))
 
     # === FAMILY / SIGNATURE MATCHES ===
     if result.detected_families:
-        score += min(cfg.get("family_log_scale", 15) * math.log2(1 + len(result.detected_families)),
-                     cfg.get("family_max", 20))
+        score += min(
+            cfg.get("family_log_scale", 15) * math.log2(1 + len(result.detected_families)), cfg.get("family_max", 20)
+        )
 
     if result.detected_signatures:
-        score += min(cfg.get("signature_log_scale", 5) * math.log2(1 + len(result.detected_signatures)),
-                     cfg.get("signature_max", 10))
+        score += min(
+            cfg.get("signature_log_scale", 5) * math.log2(1 + len(result.detected_signatures)),
+            cfg.get("signature_max", 10),
+        )
 
     if bin_families:
         high_conf = [f for f, _, c in bin_families if c >= 80]
         if high_conf:
-            score += min(cfg.get("high_conf_family_scale", 8) * math.log2(1 + len(high_conf)),
-                         cfg.get("high_conf_family_max", 10))
+            score += min(
+                cfg.get("high_conf_family_scale", 8) * math.log2(1 + len(high_conf)),
+                cfg.get("high_conf_family_max", 10),
+            )
 
     # === CONTEXTUAL BONUSES ===
     text_lower = " ".join(strings).lower()
@@ -1783,8 +1894,7 @@ def scan_file(file_path: str) -> FileScanResult:
     if result.file_type == "ELF (Linux executable)":
         elf_indicators = ["/bin/sh", "/bin/bash", "busybox", "mirai", "botnet", "wget.*sh", "curl.*sh"]
         elf_hits = sum(1 for ind in elf_indicators if ind in text_lower)
-        score += min(elf_hits * cfg.get("elf_indicators_per_hit", 2),
-                     cfg.get("elf_indicators_max", 8))
+        score += min(elf_hits * cfg.get("elf_indicators_per_hit", 2), cfg.get("elf_indicators_max", 8))
 
     # Small ELF with shellcode characteristics
     if data[:4] == b"\x7fELF" and len(data) < 500:

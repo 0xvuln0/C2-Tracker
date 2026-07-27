@@ -24,37 +24,65 @@ THRESHOLD_MEDIUM = 25
 
 KNOWN_C2_FRAMEWORKS: dict[str, list[str]] = {
     "Cobalt Strike": [
-        "cobalt", "cobaltstrike", "beacon", "malleable c2",
-        "covert", "default.html", "jquery-3.3.1.min.js",
+        "cobalt",
+        "cobaltstrike",
+        "beacon",
+        "malleable c2",
+        "covert",
+        "default.html",
+        "jquery-3.3.1.min.js",
     ],
     "Metasploit": [
-        "metasploit", "meterpreter", "msf", "reverse_tcp",
-        "reverse_http", "staged", "stageless",
+        "metasploit",
+        "meterpreter",
+        "msf",
+        "reverse_tcp",
+        "reverse_http",
+        "staged",
+        "stageless",
     ],
     "Sliver": [
-        "sliver", "sliver-c2", "mtls", "wireguard",
-        "http-c2", "dns-c2", "named pipe",
+        "sliver",
+        "sliver-c2",
+        "mtls",
+        "wireguard",
+        "http-c2",
+        "dns-c2",
+        "named pipe",
     ],
     "Covenant": [
-        "covenant", "grunt", "covenantframework",
+        "covenant",
+        "grunt",
+        "covenantframework",
     ],
     "Brute Ratel": [
-        "brute ratel", "bruteratel", "badger",
+        "brute ratel",
+        "bruteratel",
+        "badger",
     ],
     "Havoc": [
-        "havoc", "havoc-c2", "demon",
+        "havoc",
+        "havoc-c2",
+        "demon",
     ],
     "Mythic": [
-        "mythic", "mythic-c2", "athena", "apfell",
+        "mythic",
+        "mythic-c2",
+        "athena",
+        "apfell",
     ],
     "Empire": [
-        "empire", "empire-c2", "powershell-empire",
+        "empire",
+        "empire-c2",
+        "powershell-empire",
     ],
     "PoshC2": [
-        "poshc2", "posh-c2",
+        "poshc2",
+        "posh-c2",
     ],
     "Decaf": [
-        "decaf", "decaf-c2",
+        "decaf",
+        "decaf-c2",
     ],
 }
 
@@ -229,9 +257,7 @@ def analyze_threat(
         result.malware_db_matches = db_matches
         families = list({m.malware_family for m in db_matches})
         actors = list({m.threat_actor for m in db_matches if m.threat_actor != "Various"})
-        result.indicators.append(
-            f"KNOWN MALICIOUS: Matched {len(db_matches)} record(s) in threat database"
-        )
+        result.indicators.append(f"KNOWN MALICIOUS: Matched {len(db_matches)} record(s) in threat database")
         result.indicators.append(f"Malware families: {', '.join(families)}")
         if actors:
             result.indicators.append(f"Threat actors: {', '.join(actors)}")
@@ -258,26 +284,17 @@ def analyze_threat(
             if fw not in result.detected_frameworks:
                 result.detected_frameworks.append(fw)
             if fw not in result.indicators:
-                matching_port = next(
-                    c.remote_port for c in connections
-                    if C2_PORT_INDICATORS.get(c.remote_port) == fw
-                )
-                result.indicators.append(
-                    f"Port {matching_port} associated with {fw}"
-                )
+                matching_port = next(c.remote_port for c in connections if C2_PORT_INDICATORS.get(c.remote_port) == fw)
+                result.indicators.append(f"Port {matching_port} associated with {fw}")
 
     # Shodan vulnerability and port enrichment
     if shodan_result and not shodan_result.error:
         if shodan_result.vulns:
-            result.indicators.append(
-                f"{len(shodan_result.vulns)} known vulnerabilities found"
-            )
+            result.indicators.append(f"{len(shodan_result.vulns)} known vulnerabilities found")
         result.associated_ports = shodan_result.ports[:10]
 
     # Prepend framework summary
     if result.detected_frameworks:
-        result.indicators.insert(
-            0, f"C2 frameworks detected: {', '.join(result.detected_frameworks)}"
-        )
+        result.indicators.insert(0, f"C2 frameworks detected: {', '.join(result.detected_frameworks)}")
 
     return result

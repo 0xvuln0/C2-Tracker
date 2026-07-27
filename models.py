@@ -44,11 +44,26 @@ class ShodanResult:
     def is_c2_suspect(self) -> bool:
         """Check if banners contain known C2 framework indicators."""
         c2_indicators = [
-            "cobalt", "cobaltstrike", "beacon", "malleable",
-            "metasploit", "meterpreter", "covenant", "grunt",
-            "sliver", "brute ratel", "bruteratel", "badger",
-            "havoc", "demon", "decaf", "mythic", "apfell",
-            "empire", "powershell-empire", "poshc2",
+            "cobalt",
+            "cobaltstrike",
+            "beacon",
+            "malleable",
+            "metasploit",
+            "meterpreter",
+            "covenant",
+            "grunt",
+            "sliver",
+            "brute ratel",
+            "bruteratel",
+            "badger",
+            "havoc",
+            "demon",
+            "decaf",
+            "mythic",
+            "apfell",
+            "empire",
+            "powershell-empire",
+            "poshc2",
         ]
         banner_text = " ".join(str(b) for b in self.banners).lower()
         return any(ind in banner_text for ind in c2_indicators)
@@ -98,14 +113,26 @@ class CensysResult:
     def is_c2_suspect(self) -> bool:
         """Check if services contain known C2 framework indicators."""
         c2_keywords = [
-            "cobalt", "cobaltstrike", "metasploit", "meterpreter",
-            "covenant", "grunt", "sliver", "brute ratel", "bruteratel",
-            "havoc", "demon", "decaf", "mythic", "apfell",
-            "empire", "powershell-empire", "poshc2",
+            "cobalt",
+            "cobaltstrike",
+            "metasploit",
+            "meterpreter",
+            "covenant",
+            "grunt",
+            "sliver",
+            "brute ratel",
+            "bruteratel",
+            "havoc",
+            "demon",
+            "decaf",
+            "mythic",
+            "apfell",
+            "empire",
+            "powershell-empire",
+            "poshc2",
         ]
         service_text = " ".join(
-            f"{s.get('service_name', '')} {s.get('extended_service_name', '')}"
-            for s in self.services
+            f"{s.get('service_name', '')} {s.get('extended_service_name', '')}" for s in self.services
         ).lower()
         return any(kw in service_text for kw in c2_keywords)
 

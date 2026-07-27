@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 try:
     import yara
+
     YARA_AVAILABLE = True
 except ImportError:
     yara = None  # type: ignore[assignment]
@@ -82,7 +83,6 @@ rule PerlReverseShell {
         ($perl5 and $perl6 and $perl7)
 }
 """,
-
     "cobalt_strike": r"""
 rule CobaltStrikeBeacon {
     meta:
@@ -127,7 +127,6 @@ rule CobaltStrikeShellcode {
         ($jmp and $x86)
 }
 """,
-
     "metasploit": r"""
 rule MetasploitPayload {
     meta:
@@ -166,7 +165,6 @@ rule MetasploitShellcode {
         any of them
 }
 """,
-
     "webshells": r"""
 rule PHPWebShell {
     meta:
@@ -237,7 +235,6 @@ rule JavaWebShell {
         ($java2 and $java3 and $java5)
 }
 """,
-
     "credential_dumping": r"""
 rule Mimikatz {
     meta:
@@ -301,6 +298,7 @@ rule Kerberoasting {
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class YaraMatch:
     """A single YARA rule match."""
@@ -350,6 +348,7 @@ class YaraScanResult:
 # Scanner
 # ---------------------------------------------------------------------------
 
+
 class YaraScanner:
     """YARA rule scanner that compiles rules from files and built-in sources.
 
@@ -364,9 +363,7 @@ class YaraScanner:
         rules_dir: str | None = None,
         include_builtin: bool = True,
     ) -> None:
-        self.rules_dir = rules_dir or os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "rules"
-        )
+        self.rules_dir = rules_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules")
         self.include_builtin = include_builtin
         self._compiled: object | None = None
         self._rule_count = 0
@@ -480,11 +477,7 @@ class YaraScanner:
                 namespace=match.namespace,
                 tags=list(match.tags),
                 meta=dict(match.meta) if match.meta else {},
-                strings=[
-                    (inst.offset, s.identifier, inst.matched_data)
-                    for s in match.strings
-                    for inst in s.instances
-                ],
+                strings=[(inst.offset, s.identifier, inst.matched_data) for s in match.strings for inst in s.instances],
             )
             result.matches.append(ym)
 
@@ -522,11 +515,7 @@ class YaraScanner:
                 namespace=match.namespace,
                 tags=list(match.tags),
                 meta=dict(match.meta) if match.meta else {},
-                strings=[
-                    (inst.offset, s.identifier, inst.matched_data)
-                    for s in match.strings
-                    for inst in s.instances
-                ],
+                strings=[(inst.offset, s.identifier, inst.matched_data) for s in match.strings for inst in s.instances],
             )
             result.matches.append(ym)
 
