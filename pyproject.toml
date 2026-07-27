@@ -30,6 +30,20 @@ dev = [
 [project.scripts]
 c2tracker = "cli:main"
 
+[tool.setuptools]
+py-modules = [
+    "cli", "analyzer", "config", "censys_lookup", "export",
+    "file_scanner", "hunter", "malware_db", "mitre_attack",
+    "models", "network", "shodan_lookup", "yara_scanner",
+]
+
+[tool.setuptools.package-data]
+"*" = ["*.yar"]
+
+[tool.setuptools.packages.find]
+include = ["c2tracker*"]
+exclude = ["rules*", "test_samples*", "tests*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py39"
