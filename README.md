@@ -6,8 +6,11 @@
 [![PyPI](https://img.shields.io/pypi/v/c2tracker.svg)](https://pypi.org/project/c2tracker/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](Dockerfile)
 [![YARA](https://img.shields.io/badge/YARA-Supported-orange)](yara_scanner.py)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 
 Network-based Command & Control (C2) server tracker. Monitors live network connections, enriches IPs via Shodan and Censys, scans files for malware, and detects known C2 frameworks.
+
+**Works on Linux, macOS, and Windows.**
 
 > Inspired by [montysecurity/C2-Tracker](https://github.com/montysecurity/C2-Tracker) for passive Shodan-based C2 hunting approach.
 
@@ -44,6 +47,8 @@ pip install c2tracker
 > # or
 > python3 -m venv ~/venv && source ~/venv/bin/activate && pip install c2tracker
 > ```
+>
+> On **macOS**: works out of the box. On **Windows**: run as Administrator for `scan` (network monitoring) to see all connections.
 
 **From source (for development):**
 ```bash
@@ -71,6 +76,26 @@ Get free API keys:
 - Censys: https://search.censys.io/register
 
 > You can use the tool without API keys — it will use the built-in malware IP database and local network analysis.
+
+### Upgrade
+
+```bash
+pip install c2tracker --upgrade --break-system-packages
+```
+
+Or if using a venv:
+```bash
+source ~/venv/bin/activate && pip install c2tracker --upgrade
+```
+
+### Platform Notes
+
+| Platform | `scan-file` | `scan` (network) | Notes |
+|----------|-------------|-------------------|-------|
+| **Linux** | Works | Requires `sudo` | Full connection + process visibility |
+| **macOS** | Works | Requires `sudo` | Some process names may differ |
+| **Windows** | Works | Run as Administrator | Use `c2tracker scan` in an elevated terminal |
+| **Docker** | Works | Use `--network host --pid host` | See docker-compose.yml for examples |
 
 ### Docker
 
