@@ -100,6 +100,20 @@ The file scanner detects:
 - PE file information (architecture, sections, timestamps)
 - File entropy (packing/encryption detection)
 - Risk scoring with MALICIOUS/SUSPICIOUS/LOW RISK/CLEAN labels
+- **Malware family identification** with reasons for detection
+- **Binary shellcode analysis** (syscalls, XOR patterns, NOP sleds)
+- **ELF anomaly detection** (tiny binaries, no section headers)
+- **Self-learning** - improves detection with each scan
+
+### Learning database
+
+```bash
+# View learning stats
+python3 cli.py learning
+
+# Reset learning database
+python3 cli.py learning --reset
+```
 
 ### Check IPs against the threat database
 

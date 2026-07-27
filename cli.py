@@ -459,6 +459,35 @@ def cmd_scan_file(args: argparse.Namespace) -> None:
                        f"{malicious} suspicious/malicious[/bold]")
 
 
+def cmd_learning(args: argparse.Namespace) -> None:
+    """Show learning database statistics."""
+    print_banner()
+    from file_scanner import LearningDB
+
+    ldb = LearningDB()
+    stats = ldb.get_stats()
+
+    console.print("\n[bold]Learning Database Statistics[/bold]\n")
+    table = Table(show_header=False)
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Total scans", str(stats["total_scans"]))
+    table.add_row("Malicious scans", str(stats["malicious_scans"]))
+    table.add_row("Known families", str(stats["known_families"]))
+    table.add_row("Learned byte patterns", str(stats["learned_patterns"]))
+    table.add_row("Known malicious IPs", str(stats["known_ips"]))
+    table.add_row("Known malicious domains", str(stats["known_domains"]))
+    table.add_row("Known file hashes", str(stats["known_hashes"]))
+    console.print(table)
+
+    if args.reset:
+        if os.path.exists(ldb.path):
+            os.remove(ldb.path)
+            console.print("\n[green]Learning database reset successfully.[/green]")
+        else:
+            console.print("\n[yellow]No learning database found.[/yellow]")
+
+
 def _print_file_scan_result(result, verbose: bool = False) -> None:
     """Display a single FileScanResult."""
     label_colors = {
@@ -505,7 +534,18 @@ def _print_file_scan_result(result, verbose: bool = False) -> None:
         lines.append("")
         lines.append("[bold red]Detected Malware Families:[/bold red]")
         for fam in result.detected_families:
-            lines.append(f"  \u2022 [red]{fam}[/red]")
+            reasons = result.family_reasons.get(fam, [])
+            if reasons:
+                reason_str = "; ".join(reasons[:2])
+                lines.append(f"  \u2022 [red]{fam}[/red] [dim]({reason_str})[/dim]")
+            else:
+                lines.append(f"  \u2022 [red]{fam}[/red]")
+
+    if result.similar_known_malware:
+        lines.append("")
+        lines.append("[bold yellow]Similar To (learned):[/bold yellow]")
+        for fam in result.similar_known_malware:
+            lines.append(f"  \u2022 [yellow]{fam}[/yellow]")
 
     if result.suspicious_strings:
         lines.append("")
@@ -599,6 +639,9 @@ def main() -> None:
     scanfile_parser.add_argument("files", nargs="+", help="File paths to scan")
     scanfile_parser.add_argument("-v", "--verbose", action="store_true", help="Show embedded IPs, domains, and signatures")
 
+    learn_parser = subparsers.add_parser("learning", help="Show learning database stats")
+    learn_parser.add_argument("--reset", action="store_true", help="Reset learning database")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -616,6 +659,8 @@ def main() -> None:
         cmd_hunt(args)
     elif args.command == "scan-file":
         cmd_scan_file(args)
+    elif args.command == "learning":
+        cmd_learning(args)
     else:
         parser.print_help()
 

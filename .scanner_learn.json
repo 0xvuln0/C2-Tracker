@@ -1,0 +1,309 @@
+{
+  "scans": 2,
+  "malicious": 2,
+  "families": {
+    "Linux Reverse Shell": {
+      "count": 2,
+      "ips": [],
+      "domains": []
+    },
+    "Reverse Shell C2": {
+      "count": 2,
+      "ips": [],
+      "domains": []
+    },
+    "Mirai Botnet": {
+      "count": 2,
+      "ips": [],
+      "domains": []
+    },
+    "Netcat Reverse Shell": {
+      "count": 2,
+      "ips": [],
+      "domains": []
+    }
+  },
+  "byte_patterns": {
+    "4889d64d31c96a22": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.026308
+    },
+    "31c96a22415a6a07": {
+      "count": 2,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.026368
+    },
+    "415a6a075a0f0548": {
+      "count": 2,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0263898
+    },
+    "5a0f054885c07851": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.026408
+    },
+    "6a0a4159506a2958": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.026453
+    },
+    "506a2958996a025f": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0264776
+    },
+    "6a015e0f054885c0": {
+      "count": 2,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0271485
+    },
+    "89e66a105a6a2a58": {
+      "count": 2,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0272667
+    },
+    "5a6a2a580f055948": {
+      "count": 2,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0272858
+    },
+    "0f05594885c07925": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0273013
+    },
+    "4831f60f0559595f": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0273983
+    },
+    "6a015f0f055e6a7e": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0274622
+    },
+    "055e6a7e5a0f0548": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0274763
+    },
+    "5a0f054885c078ed": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.0274894
+    },
+    "4889d64531c96a22": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2221656
+    },
+    "5a0f054885c07850": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.222245
+    },
+    "506a0a41596a2958": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2223036
+    },
+    "596a2958996a025f": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2223346
+    },
+    "0f05594885c07924": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2225578
+    },
+    "054889e731f60f05": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2226505
+    },
+    "31f60f0559595f48": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2226734
+    },
+    "6a3c586a015f0f05": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2227337
+    },
+    "015f0f055e6a7e5a": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2227602
+    },
+    "5e6a7e5a31c00f05": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2227793
+    },
+    "31c00f054885c078": {
+      "count": 1,
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "first_seen": 1785117556.2227974
+    }
+  },
+  "ips_seen": {},
+  "domains_seen": {
+    "note.gnu": 1
+  },
+  "hashes": {
+    "86c8f7d2cf9efb2046de056991ea81e7be8810282c3336f40d0b4a09a73459f7": {
+      "md5": "00f9bb248cd3c1a5e287595943a2d842",
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "score": 100,
+      "label": "MALICIOUS",
+      "first_seen": 1785117556.0227323
+    },
+    "bde6032c28b3d20bff54733467ece4f794ba965346ca4fec6f65b58ea62e2f12": {
+      "md5": "82bdc56def15c19c0aedaa015989a9d3",
+      "families": [
+        "Linux Reverse Shell",
+        "Reverse Shell C2",
+        "Mirai Botnet",
+        "Netcat Reverse Shell"
+      ],
+      "score": 100,
+      "label": "MALICIOUS",
+      "first_seen": 1785117556.1837265
+    }
+  },
+  "shellcode_templates": {}
+}

@@ -1,18 +1,22 @@
 """File-based malware signature and behavior scanner.
 
 Scans files for known malware signatures, embedded IOCs,
-suspicious strings, and behavioral indicators.
+suspicious strings, and behavioral indicators. Learns from
+each scan to improve future detection.
 """
 
 from __future__ import annotations
 
 import hashlib
 import ipaddress
+import json
 import math
 import os
 import re
 import struct
+import time
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -29,12 +33,14 @@ class FileScanResult:
     risk_label: str = "CLEAN"
     detected_signatures: list[str] = field(default_factory=list)
     detected_families: list[str] = field(default_factory=list)
+    family_reasons: dict[str, list[str]] = field(default_factory=dict)
     embedded_ips: list[str] = field(default_factory=list)
     embedded_domains: list[str] = field(default_factory=list)
     suspicious_strings: list[str] = field(default_factory=list)
     pe_info: dict = field(default_factory=dict)
     indicators: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    similar_known_malware: list[str] = field(default_factory=list)
 
 
 # Known malware string signatures (case-insensitive patterns)
@@ -583,6 +589,268 @@ KNOWN_MALICIOUS_IP_PATTERNS: list[str] = [
     r"185\.215\.113\.\d+",
 ]
 
+# Binary malware family signatures (byte patterns -> family + description)
+# Each entry: (pattern_bytes, family, description, confidence)
+BINARY_FAMILY_SIGNATURES: list[tuple[bytes, str, str, int]] = [
+    # --- Linux shellcode families ---
+    # Generic Linux reverse shell
+    (b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05",
+     "Linux Reverse Shell", "Generic Linux x64 reverse shell (socket/connect)", 80),
+    # execve /bin/sh shellcode
+    (b"\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68",
+     "Linux Shellcode", "execve /bin/sh shellcode", 85),
+    # setuid(0) + execve /bin/sh
+    (b"\x48\x31\xff\x6a\x09\x58\x0f\x05",
+     "Privilege Escalation Shellcode", "setuid(0) shellcode", 75),
+    # dup2 shellcode (redirecting stdin/stdout/stderr)
+    (b"\x48\x31\xc0\x48\x31\xff\xb8\x21\x00\x00\x00",
+     "Shellcode dup2", "File descriptor duplication shellcode", 70),
+    # connect-back shellcode with hardcoded IP
+    (b"\x02\x00\x11\x5c",
+     "Reverse Shell C2", "Port 4444 connect-back shellcode", 90),
+
+    # --- Metasploit signatures ---
+    # msfvenom Linux x64 reverse shell
+    (b"\x48\x31\xc0\x48\x31\xff\x48\x31\xf6\x48\x31\xd2\x48\x31\xc9\x48\x31\xdb\x48\x31\xc0\x50\x48\x31\xc0",
+     "Metasploit", "Metasploit-generated shellcode (Linux x64)", 90),
+    # msfvenom Windows reverse shell
+    (b"\xfc\xe8\x82\x00\x00\x00\x60\x89\xe5\x31\xd2",
+     "Metasploit", "Metasploit-generated shellcode (Windows)", 90),
+    # msfvenom windows/meterpreter/reverse_tcp
+    (b"\xfc\xe8\x89\x00\x00\x00\x60\x89\xe5\x31\xd2",
+     "Metasploit Meterpreter", "Metasploit Meterpreter shellcode", 95),
+
+    # --- Cobalt Strike ---
+    # Cobalt Strike beacon x64
+    (b"\x48\x89\x5c\x24\x08\x48\x89\x6c\x24\x10\x48\x89\x74\x24\x18",
+     "Cobalt Strike", "Cobalt Strike Beacon (x64 prologue)", 85),
+    # Cobalt Strike beacon x86
+    (b"\x55\x8b\xec\x83\xec\x0c\x53\x56\x57",
+     "Cobalt Strike", "Cobalt Strike Beacon (x86 prologue)", 80),
+
+    # --- Sliver ---
+    # Sliver implant pattern
+    (b"\x48\x8b\x0c\x24\x48\x89\x4c\x24\x08",
+     "Sliver", "Sliver implant pattern", 75),
+
+    # --- Mirai Botnet ---
+    # Mirai propagation pattern
+    (b"/bin/busybox",
+     "Mirai Botnet", "Mirai botnet binary", 85),
+    # Mirai DDoS pattern
+    (b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     "Mirai Botnet", "Mirai DDoS padding pattern", 70),
+
+    # --- Reverse Shell Families ---
+    # Python reverse shell
+    (b"\x48\x89\xe7\x48\x31\xf6\x48\x31\xd2\x6a\x3b\x58\x0f\x05",
+     "Python Reverse Shell", "Python-based reverse shell shellcode", 85),
+    # Netcat reverse shell
+    (b"\x6a\x29\x58\x99\x6a\x02\x5f\x6a\x01\x5e\x0f\x05",
+     "Netcat Reverse Shell", "Netcat-style reverse shell", 80),
+    # Bash reverse shell
+    (b"\x6a\x3b\x58\x99\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68",
+     "Bash Reverse Shell", "execve /bin/sh reverse shell", 85),
+
+    # --- Ransomware ---
+    # LockBit 3.0 patterns
+    (b"\x2e\x6c\x6f\x63\x6b\x62\x69\x74",
+     "LockBit 3.0", "LockBit ransomware identifier", 90),
+    # Conti ransomware patterns
+    (b"\x63\x6f\x6e\x74\x69\x2e\x65\x78\x65",
+     "Conti", "Conti ransomware binary", 85),
+    # REvil/Sodinokibi patterns
+    (b"\x72\x65\x76\x69\x6c",
+     "REvil", "REvil/Sodinokibi ransomware", 80),
+
+    # --- RAT Families ---
+    # AsyncRAT pattern
+    (b"\x41\x73\x79\x6e\x63\x72\x61\x74",
+     "AsyncRAT", "AsyncRAT implant", 80),
+    # njRAT pattern
+    (b"\x6e\x6a\x52\x41\x54",
+     "njRAT", "njRAT implant", 75),
+    # Remcos pattern
+    (b"\x72\x65\x6d\x63\x6f\x73",
+     "Remcos", "Remcos RAT implant", 75),
+
+    # --- Banking Trojans ---
+    # Emotet pattern
+    (b"\x65\x6d\x6f\x74\x65\x74",
+     "Emotet", "Emotet banking trojan", 80),
+    # TrickBot pattern
+    (b"\x74\x72\x69\x63\x6b\x62\x6f\x74",
+     "TrickBot", "TrickBot banking trojan", 80),
+    # Dridex pattern
+    (b"\x64\x72\x69\x64\x65\x78",
+     "Dridex", "Dridex banking trojan", 75),
+
+    # --- Info Stealers ---
+    # RedLine Stealer
+    (b"\x52\x65\x64\x4c\x69\x6e\x65",
+     "RedLine Stealer", "RedLine infostealer", 80),
+    # Raccoon Stealer
+    (b"\x52\x61\x63\x63\x6f\x6f\x6e",
+     "Raccoon Stealer", "Raccoon infostealer", 75),
+    # Vidar Stealer
+    (b"\x56\x69\x64\x61\x72",
+     "Vidar Stealer", "Vidar infostealer", 75),
+
+    # --- Worms ---
+    # Conficker pattern
+    (b"\x63\x6f\x6e\x66\x69\x63\x6b\x65\x72",
+     "Conficker", "Conficker worm", 80),
+    #震网 Stuxnet pattern
+    (b"\x73\x74\x75\x78\x6e\x65\x74",
+     "Stuxnet", "Stuxnet worm", 85),
+]
+
+# Learning database path
+LEARNING_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".scanner_learn.json")
+
+
+class LearningDB:
+    """Persistent learning database that improves detection over time."""
+
+    def __init__(self, path: str = LEARNING_DB_PATH):
+        self.path = path
+        self.data = self._load()
+
+    def _load(self) -> dict:
+        if os.path.exists(self.path):
+            try:
+                with open(self.path, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {
+            "scans": 0,
+            "malicious": 0,
+            "families": {},
+            "byte_patterns": {},
+            "ips_seen": {},
+            "domains_seen": {},
+            "hashes": {},
+            "shellcode_templates": {},
+        }
+
+    def _save(self) -> None:
+        try:
+            with open(self.path, "w") as f:
+                json.dump(self.data, f, indent=2)
+        except IOError:
+            pass
+
+    def record_scan(self, result: "FileScanResult") -> None:
+        """Record a scan result to improve future detection."""
+        self.data["scans"] += 1
+
+        if result.risk_label in ("MALICIOUS", "SUSPICIOUS"):
+            self.data["malicious"] += 1
+
+            # Record detected families
+            for family in result.detected_families:
+                if family not in self.data["families"]:
+                    self.data["families"][family] = {"count": 0, "ips": [], "domains": []}
+                self.data["families"][family]["count"] += 1
+
+            # Record IPs and domains
+            for ip in result.embedded_ips:
+                self.data["ips_seen"][ip] = self.data["ips_seen"].get(ip, 0) + 1
+            for domain in result.embedded_domains:
+                self.data["domains_seen"][domain] = self.data["domains_seen"].get(domain, 0) + 1
+
+            # Record file hash
+            if result.sha256:
+                self.data["hashes"][result.sha256] = {
+                    "md5": result.md5,
+                    "families": result.detected_families,
+                    "score": result.risk_score,
+                    "label": result.risk_label,
+                    "first_seen": time.time(),
+                }
+
+            # Extract and record byte patterns from malicious files
+            if result.risk_label == "MALICIOUS":
+                self._learn_byte_patterns(result)
+
+        self._save()
+
+    def _learn_byte_patterns(self, result: "FileScanResult") -> None:
+        """Extract and record byte patterns from known malicious files."""
+        try:
+            with open(result.path, "rb") as f:
+                data = f.read(1024 * 1024)  # Max 1MB
+        except IOError:
+            return
+
+        # Extract unique 8-byte sequences that appear in shellcode
+        seen_patterns = set()
+        for i in range(0, min(len(data) - 8, 100000), 4):
+            chunk = data[i:i + 8]
+            # Only record patterns that look like shellcode (contain syscalls, XORs, etc.)
+            if any(sig in chunk for sig in [b"\x0f\x05", b"\xcd\x80", b"\x31\xc0",
+                                            b"\x31\xc9", b"\x31\xd2", b"\x6a\x29",
+                                            b"\x6a\x2a", b"\x6a\x3b"]):
+                pattern_hex = chunk.hex()
+                if pattern_hex not in seen_patterns:
+                    seen_patterns.add(pattern_hex)
+                    if pattern_hex not in self.data["byte_patterns"]:
+                        self.data["byte_patterns"][pattern_hex] = {
+                            "count": 0,
+                            "families": [],
+                            "first_seen": time.time(),
+                        }
+                    self.data["byte_patterns"][pattern_hex]["count"] += 1
+                    for family in result.detected_families:
+                        if family not in self.data["byte_patterns"][pattern_hex]["families"]:
+                            self.data["byte_patterns"][pattern_hex]["families"].append(family)
+
+    def get_similar_families(self, result: "FileScanResult") -> list[str]:
+        """Find similar malware based on learned patterns."""
+        similar = set()
+
+        # Check known hashes
+        if result.sha256 in self.data["hashes"]:
+            hash_info = self.data["hashes"][result.sha256]
+            similar.update(hash_info.get("families", []))
+
+        # Check byte patterns
+        try:
+            with open(result.path, "rb") as f:
+                data = f.read(1024 * 1024)
+        except IOError:
+            return list(similar)
+
+        for i in range(0, min(len(data) - 8, 100000), 4):
+            chunk = data[i:i + 8]
+            pattern_hex = chunk.hex()
+            if pattern_hex in self.data["byte_patterns"]:
+                info = self.data["byte_patterns"][pattern_hex]
+                if info["count"] >= 3:  # Pattern seen 3+ times
+                    similar.update(info["families"])
+
+        return list(similar)
+
+    def get_known_malicious_ips(self, min_count: int = 2) -> list[str]:
+        """Get IPs seen multiple times across scans."""
+        return [ip for ip, count in self.data["ips_seen"].items() if count >= min_count]
+
+    def get_known_malicious_domains(self, min_count: int = 2) -> list[str]:
+        """Get domains seen multiple times across scans."""
+        return [dom for dom, count in self.data["domains_seen"].items() if count >= min_count]
+
+    def get_stats(self) -> dict:
+        return {
+            "total_scans": self.data["scans"],
+            "malicious_scans": self.data["malicious"],
+            "known_families": len(self.data["families"]),
+            "learned_patterns": len(self.data["byte_patterns"]),
+            "known_ips": len(self.data["ips_seen"]),
+            "known_domains": len(self.data["domains_seen"]),
+            "known_hashes": len(self.data["hashes"]),
+        }
+
 
 def calculate_entropy(data: bytes) -> float:
     """Calculate Shannon entropy of data (0.0 = uniform, 8.0 = random)."""
@@ -800,9 +1068,20 @@ def check_elf_info(data: bytes) -> dict:
     return info
 
 
-def detect_binary_patterns(data: bytes) -> list[str]:
-    """Detect shellcode and malicious binary patterns in raw bytes."""
+def detect_binary_patterns(data: bytes) -> tuple[list[str], list[tuple[str, str, int]]]:
+    """Detect shellcode and malicious binary patterns in raw bytes.
+
+    Returns:
+        Tuple of (suspicious_strings, family_matches) where family_matches
+        is a list of (family, reason, confidence) tuples.
+    """
     patterns = []
+    family_matches: list[tuple[str, str, int]] = []
+
+    # --- Check binary malware family signatures ---
+    for pattern_bytes, family, description, confidence in BINARY_FAMILY_SIGNATURES:
+        if pattern_bytes in data:
+            family_matches.append((family, description, confidence))
 
     # --- Linux x86-64 syscall sequences ---
     # SYSCALL (0x0f 0x05) is the primary indicator
@@ -909,7 +1188,7 @@ def detect_binary_patterns(data: bytes) -> list[str]:
             patterns.append(f"Private IP 192.168.{data[i+2]}.{data[i+3]} detected")
             break
 
-    return patterns
+    return patterns, family_matches
 
 
 def detect_elf_anomalies(data: bytes) -> list[str]:
@@ -1031,9 +1310,18 @@ def scan_file(file_path: str) -> FileScanResult:
                 break
 
     # --- Binary pattern detection (for shellcode, ELF malware, etc.) ---
-    bin_patterns = detect_binary_patterns(data)
+    bin_patterns, bin_families = detect_binary_patterns(data)
     for bp in bin_patterns:
         result.suspicious_strings.append(bp)
+
+    # Add binary-detected families
+    for family, reason, confidence in bin_families:
+        if family not in result.detected_families:
+            result.detected_families.append(family)
+            result.family_reasons[family] = [reason]
+        elif family in result.family_reasons:
+            if reason not in result.family_reasons[family]:
+                result.family_reasons[family].append(reason)
 
     # --- ELF anomaly detection ---
     if data[:4] == b"\x7fELF":
@@ -1058,6 +1346,19 @@ def scan_file(file_path: str) -> FileScanResult:
         if re.search(pattern, text_full, re.IGNORECASE):
             if description not in result.suspicious_strings:
                 result.suspicious_strings.append(description)
+
+    # --- Learning DB: check for similar known malware ---
+    try:
+        ldb = LearningDB()
+        similar = ldb.get_similar_families(result)
+        if similar:
+            result.similar_known_malware = similar
+            for fam in similar:
+                if fam not in result.detected_families:
+                    result.detected_families.append(fam)
+                    result.family_reasons[fam] = ["Similar to known malware (learned)"]
+    except Exception:
+        pass
 
     # Calculate risk score
     score = 0
@@ -1116,6 +1417,11 @@ def scan_file(file_path: str) -> FileScanResult:
     if data[:4] == b"\x7fELF" and len(data) < 500:
         score += 25
 
+    # Bonus for binary family matches (high confidence)
+    if bin_families:
+        high_conf = [f for f, _, c in bin_families if c >= 80]
+        score += len(high_conf) * 15
+
     result.risk_score = min(score, 100)
 
     if result.risk_score >= 70:
@@ -1130,6 +1436,8 @@ def scan_file(file_path: str) -> FileScanResult:
     # Build final indicators list
     if result.detected_families:
         result.indicators.insert(0, f"Detected families: {', '.join(result.detected_families)}")
+    if result.similar_known_malware:
+        result.indicators.append(f"Similar to known: {', '.join(result.similar_known_malware)}")
     if result.detected_signatures:
         result.indicators.append(f"{len(result.detected_signatures)} signature match(es)")
     if result.suspicious_strings:
@@ -1138,5 +1446,12 @@ def scan_file(file_path: str) -> FileScanResult:
         result.indicators.append(f"{len(result.embedded_ips)} embedded IP(s)")
     if result.embedded_domains:
         result.indicators.append(f"{len(result.embedded_domains)} embedded domain(s)")
+
+    # --- Record to learning database ---
+    try:
+        ldb = LearningDB()
+        ldb.record_scan(result)
+    except Exception:
+        pass
 
     return result
