@@ -29,19 +29,21 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install the tool
 
 ```bash
-pip install -r requirements.txt
+pip install .
 ```
 
-### 4. Set up API keys (optional, for Shodan/Censys lookups)
+This installs `c2tracker` as a command you can run from anywhere. Alternatively, you can skip this step and run it directly with `python3 -m c2tracker`.
+
+### 4. Set up API keys (optional)
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your API keys:
+Edit `.env` and add your API keys:
 
 ```
 SHODAN_API_KEY=your_key_here
@@ -50,70 +52,57 @@ CENSYS_API_SECRET=your_secret_here
 ```
 
 Get free API keys:
-- Shodan: https://account.shodio.io
+- Shodan: https://account.shodan.io
 - Censys: https://search.censys.io/register
 
-> You can still use the tool without API keys — it will use the built-in malware IP database and local network analysis.
+> You can use the tool without API keys — it will use the built-in malware IP database and local network analysis.
 
 ## Usage
 
 All scan commands require `sudo` because they read live network connections.
 
-There are two ways to run the tool:
-
-**Option A — Run directly with Python (no install needed):**
-
-```bash
-sudo python3 c2tracker/cli.py scan
-```
-
-**Option B — Install it first, then use the `c2tracker` command:**
-
-```bash
-pip install .
-sudo c2tracker scan
-```
+After `pip install .`, you can use the `c2tracker` command directly. Or run via Python: `python3 -m c2tracker`.
 
 ### Scan network connections
 
 ```bash
 # Basic scan
-sudo python3 c2tracker/cli.py scan
+sudo c2tracker scan
 
 # Show all connections with verbose output
-sudo python3 c2tracker/cli.py scan -s -v
+sudo c2tracker scan -s -v
 
 # Continuous monitoring (check every 10 seconds)
-sudo python3 c2tracker/cli.py scan -m -i 10
+sudo c2tracker scan -m -i 10
 
 # Filter out private/internal IPs
-sudo python3 c2tracker/cli.py scan -f
+sudo c2tracker scan -f
 
 # Local-only scan (no Shodan/Censys lookups, just malware DB + network)
-sudo python3 c2tracker/cli.py scan --no-api
+sudo c2tracker scan --no-api
 ```
 
 ### Check IPs against the threat database
 
 ```bash
 # Check one or more IPs
-python3 c2tracker/cli.py check 45.77.65.114
-python3 c2tracker/cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
+c2tracker check 45.77.65.114
+c2tracker check 45.77.65.114 185.56.83.83 192.168.1.1
 ```
 
 ### Search the threat database
 
 ```bash
 # Search by malware family
-python3 c2tracker/cli.py family "cobalt strike"
-python3 c2tracker/cli.py family trickbot
+c2tracker family "cobalt strike"
+c2tracker family trickbot
 
 # Search by threat actor
-python3 c2tracker/cli.py actor "Evil Corp"
-python3 c2tracker/cli.py actor "Conti Group"
+c2tracker actor "Evil Corp"
+c2tracker actor "Conti Group"
 
 # Show database summary
-python3 c2tracker/cli.py db --families --actors
+c2tracker db --families --actors
 ```
 
 ## C2 Frameworks Detected
