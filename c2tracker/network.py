@@ -73,24 +73,38 @@ def get_connections() -> list[Connection]:
     seen: set[tuple[str, int, str, int]] = set()
 
     for conn in psutil.net_connections(kind="inet"):
-        if conn.raddr is None:
+        if not conn.raddr:
             continue
 
-        remote_ip = conn.raddr.ip
+        # raddr may be a named tuple (addr) or a plain tuple (ip, port)
+        try:
+            raddr = conn.raddr
+            remote_ip = raddr[0] if isinstance(raddr, tuple) and len(raddr) >= 2 else raddr.ip
+            remote_port = raddr[1] if isinstance(raddr, tuple) and len(raddr) >= 2 else raddr.port
+        except (AttributeError, IndexError, TypeError):
+            continue
+
         if remote_ip in ("127.0.0.1", "0.0.0.0", "::1"):
             continue
 
-        key = (conn.laddr.ip, conn.laddr.port, remote_ip, conn.raddr.port)
+        try:
+            laddr = conn.laddr
+            local_ip = laddr[0] if isinstance(laddr, tuple) and len(laddr) >= 2 else laddr.ip
+            local_port = laddr[1] if isinstance(laddr, tuple) and len(laddr) >= 2 else laddr.port
+        except (AttributeError, IndexError, TypeError):
+            continue
+
+        key = (local_ip, local_port, remote_ip, remote_port)
         if key in seen:
             continue
         seen.add(key)
 
         connections.append(
             Connection(
-                local_addr=conn.laddr.ip,
-                local_port=conn.laddr.port,
+                local_addr=local_ip,
+                local_port=local_port,
                 remote_addr=remote_ip,
-                remote_port=conn.raddr.port,
+                remote_port=remote_port,
                 status=conn.status.name if hasattr(conn.status, "name") else str(conn.status),
                 pid=conn.pid,
                 process_name=_resolve_process(conn.pid) if conn.pid else None,

@@ -245,10 +245,13 @@ def run_scan(args: argparse.Namespace) -> None:
 
 def _analyze_single_ip(config, ip, connections, args, analyze_threat):
     """Look up a single IP via configured APIs and run threat analysis."""
-    from c2tracker.censys_lookup import lookup_ip as censys_lookup
-    from c2tracker.shodan_lookup import lookup_ip as shodan_lookup
+    s_result = None
+    c_result = None
 
     if not args.no_api:
+        from c2tracker.censys_lookup import lookup_ip as censys_lookup
+        from c2tracker.shodan_lookup import lookup_ip as shodan_lookup
+
         if args.verbose:
             console.print(f"  [dim]Looking up {ip} via Shodan...[/dim]")
         s_result = shodan_lookup(config.shodan_api_key, ip)
@@ -256,9 +259,6 @@ def _analyze_single_ip(config, ip, connections, args, analyze_threat):
         if args.verbose:
             console.print(f"  [dim]Looking up {ip} via Censys...[/dim]")
         c_result = censys_lookup(config.censys_api_id, config.censys_api_secret, ip)
-    else:
-        s_result = None
-        c_result = None
 
     return analyze_threat(ip, s_result, c_result, connections)
 

@@ -61,8 +61,6 @@ KNOWN_C2_FRAMEWORKS: dict[str, list[str]] = {
 C2_PORT_INDICATORS: dict[int, str] = {
     50050: "Cobalt Strike",
     8443: "Common C2 / HTTPS C2",
-    443: "Common HTTPS C2",
-    80: "Common HTTP C2",
     53: "Possible DNS C2",
     8080: "Common C2",
     4444: "Metasploit (common)",
@@ -70,6 +68,12 @@ C2_PORT_INDICATORS: dict[int, str] = {
     6568: "Sliver",
     9001: "Sliver / C2",
     8888: "Common C2",
+    6606: "AsyncRAT",
+    4782: "QuasarRAT",
+    1177: "njRAT",
+    5000: "Remcos / Agent Tesla",
+    7443: "Covenant / Mythic",
+    65530: "SectopRAT",
 }
 
 
