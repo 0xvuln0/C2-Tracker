@@ -3,6 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/0xvuln0/C2-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/0xvuln0/C2-Tracker/actions)
+[![PyPI](https://img.shields.io/pypi/v/c2tracker.svg)](https://pypi.org/project/c2tracker/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](Dockerfile)
 [![YARA](https://img.shields.io/badge/YARA-Supported-orange)](yara_scanner.py)
 
@@ -32,6 +33,13 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 
 ### 1. Clone and install
 
+**From PyPI (recommended):**
+```bash
+pip install c2tracker
+c2tracker --help
+```
+
+**From source:**
 ```bash
 git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
