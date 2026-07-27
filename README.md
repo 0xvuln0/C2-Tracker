@@ -12,6 +12,7 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 - **Threat scoring** — weighted scoring based on framework detection, port indicators, vulnerabilities, and banner analysis
 - **Continuous monitoring** mode with configurable intervals
 - **Private IP filtering** to focus on external connections
+- **C2 Hunting** — passive Shodan queries to find C2 infrastructure across the internet
 
 ## Quick Start
 
@@ -22,22 +23,7 @@ git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
 ```
 
-### 2. Create a virtual environment (recommended)
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install the tool
-
-```bash
-pip install .
-```
-
-This installs `c2tracker` as a command you can run from anywhere. Alternatively, you can skip this step and run it directly with `python3 -m c2tracker`.
-
-### 4. Set up API keys (optional)
+### 2. Set up API keys (optional)
 
 ```bash
 cp .env.example .env
@@ -59,50 +45,62 @@ Get free API keys:
 
 ## Usage
 
-All scan commands require `sudo` because they read live network connections.
-
-After `pip install .`, you can use the `c2tracker` command directly. Or run via Python: `python3 -m c2tracker`.
-
 ### Scan network connections
 
 ```bash
-# Basic scan
-sudo c2tracker scan
+# Basic scan (requires sudo for live connection data)
+sudo python3 c2tracker/cli.py scan
 
 # Show all connections with verbose output
-sudo c2tracker scan -s -v
+sudo python3 c2tracker/cli.py scan -s -v
 
 # Continuous monitoring (check every 10 seconds)
-sudo c2tracker scan -m -i 10
+sudo python3 c2tracker/cli.py scan -m -i 10
 
 # Filter out private/internal IPs
-sudo c2tracker scan -f
+sudo python3 c2tracker/cli.py scan -f
 
 # Local-only scan (no Shodan/Censys lookups, just malware DB + network)
-sudo c2tracker scan --no-api
+sudo python3 c2tracker/cli.py scan --no-api
+```
+
+### Hunt C2 infrastructure via Shodan
+
+```bash
+# Hunt all tracked C2 families (requires Shodan API key)
+python3 c2tracker/cli.py hunt
+
+# Hunt specific products only
+python3 c2tracker/cli.py hunt "Cobalt Strike" "Sliver" "AsyncRAT"
+
+# Verbose output showing each query
+python3 c2tracker/cli.py hunt -v
+
+# Custom output directory
+python3 c2tracker/cli.py hunt -o /tmp/c2data
 ```
 
 ### Check IPs against the threat database
 
 ```bash
 # Check one or more IPs
-c2tracker check 45.77.65.114
-c2tracker check 45.77.65.114 185.56.83.83 192.168.1.1
+python3 c2tracker/cli.py check 45.77.65.114
+python3 c2tracker/cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
 ```
 
 ### Search the threat database
 
 ```bash
 # Search by malware family
-c2tracker family "cobalt strike"
-c2tracker family trickbot
+python3 c2tracker/cli.py family "cobalt strike"
+python3 c2tracker/cli.py family trickbot
 
 # Search by threat actor
-c2tracker actor "Evil Corp"
-c2tracker actor "Conti Group"
+python3 c2tracker/cli.py actor "Evil Corp"
+python3 c2tracker/cli.py actor "Conti Group"
 
 # Show database summary
-c2tracker db --families --actors
+python3 c2tracker/cli.py db --families --actors
 ```
 
 ## C2 Frameworks Detected
@@ -136,8 +134,8 @@ c2tracker db --families --actors
 ## Requirements
 
 - Python 3.9+
-- Root/sudo access (for live network monitoring)
-- (Optional) Shodan API key — free tier available
+- Root/sudo access (for live network monitoring via `scan`)
+- (Optional) Shodan API key — free tier available (required for `hunt`)
 - (Optional) Censys API key — free tier available
 
 ## License

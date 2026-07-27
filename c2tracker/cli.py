@@ -373,6 +373,64 @@ def cmd_list_db(args: argparse.Namespace) -> None:
             console.print(f"  \u2022 {act} ({count} IPs)")
 
 
+def cmd_hunt(args: argparse.Namespace) -> None:
+    """Hunt for C2 infrastructure across the internet via Shodan queries."""
+    print_banner()
+    from c2tracker.config import Config
+    from c2tracker.hunter import hunt_shodan, get_products
+
+    config = Config.from_env(args.env_file)
+    errors = config.validate(require_shodan=True, require_censys=False)
+    if errors:
+        console.print("[bold red]Configuration error:[/bold red]")
+        for e in errors:
+            console.print(f"  \u2022 {e}")
+        console.print("\n[dim]Shodan API key is required for hunting. Set SHODAN_API_KEY in .env[/dim]")
+        sys.exit(1)
+
+    products = args.products if args.products else None
+    output_dir = args.output or "data"
+
+    console.print(f"\n[bold]Hunting C2 infrastructure via Shodan...[/bold]")
+    if products:
+        console.print(f"  Products: {', '.join(products)}")
+    else:
+        console.print(f"  Products: all ({len(get_products())} tracked families)")
+    console.print(f"  Output: {output_dir}/\n")
+
+    def on_progress(product, query, count):
+        console.print(f"  [dim]{product}[/dim] - {count} IP(s) found")
+
+    try:
+        results = hunt_shodan(
+            api_key=config.shodan_api_key,
+            products=products,
+            output_dir=output_dir,
+            verbose=args.verbose,
+            on_progress=on_progress,
+        )
+    except Exception as e:
+        console.print(f"\n[bold red]Hunt failed: {e}[/bold red]")
+        sys.exit(1)
+
+    # Summary table
+    console.print()
+    table = Table(title="Hunt Results", show_lines=True)
+    table.add_column("Product", style="cyan")
+    table.add_column("IPs Found", style="green", justify="right")
+    table.add_column("Errors", style="red", justify="right")
+
+    total_ips = 0
+    for product, result in sorted(results.items()):
+        ip_count = len(result.ips)
+        err_count = len(result.errors)
+        total_ips += ip_count
+        table.add_row(product, str(ip_count), str(err_count) if err_count else "-")
+
+    console.print(table)
+    console.print(f"\n[bold green]{total_ips} unique IP(s) written to {output_dir}/[/bold green]")
+
+
 def main() -> None:
     """CLI entry point for c2tracker."""
     parser = argparse.ArgumentParser(
@@ -411,6 +469,11 @@ def main() -> None:
     db_parser.add_argument("--families", action="store_true", help="List all malware families")
     db_parser.add_argument("--actors", action="store_true", help="List all threat actors")
 
+    hunt_parser = subparsers.add_parser("hunt", help="Hunt C2 infrastructure via Shodan queries")
+    hunt_parser.add_argument("products", nargs="*", help="Specific products to hunt (default: all)")
+    hunt_parser.add_argument("-o", "--output", default="data", help="Output directory for IP lists")
+    hunt_parser.add_argument("-v", "--verbose", action="store_true", help="Show each query as it runs")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -424,6 +487,8 @@ def main() -> None:
         cmd_search_actor(args)
     elif args.command == "db":
         cmd_list_db(args)
+    elif args.command == "hunt":
+        cmd_hunt(args)
     else:
         parser.print_help()
 
