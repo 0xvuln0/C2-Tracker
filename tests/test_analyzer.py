@@ -300,7 +300,7 @@ class TestConstants:
 
 class TestMalwareDatabase:
     def test_database_populated(self):
-        assert len(KNOWN_MALWARE_IPS) >= 100
+        assert len(KNOWN_MALWARE_IPS) >= 500
 
     def test_check_known_ip(self):
         matches = check_ip("45.77.65.114")

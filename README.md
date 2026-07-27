@@ -7,7 +7,7 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 - **Live network monitoring** via `psutil` — tracks all inbound/outbound connections
 - **Shodan enrichment** — banners, open ports, vulnerabilities, OS, org info
 - **Censys enrichment** — services, protocols, autonomous system data
-- **Known malicious IP database** — 120+ IPs linked to Cobalt Strike, Metasploit, Sliver, TrickBot, Emotet, Conti, LockBit, REvil, and more
+- **Known malicious IP database** — 1200+ IPs linked to Cobalt Strike, Metasploit, Sliver, TrickBot, Emotet, Conti, LockBit, REvil, and more
 - **C2 framework detection** — Cobalt Strike, Metasploit, Sliver, Havoc, Covenant, Mythic, Empire, PoshC2, Brute Ratel, Decaf, and more
 - **Threat scoring** — weighted scoring based on framework detection, port indicators, vulnerabilities, and banner analysis
 - **Continuous monitoring** mode with configurable intervals
@@ -68,17 +68,38 @@ sudo python3 c2tracker/cli.py scan --no-api
 
 ```bash
 # Hunt all tracked C2 families (requires Shodan API key)
-python3 c2tracker/cli.py hunt
+python3 cli.py hunt
 
 # Hunt specific products only
-python3 c2tracker/cli.py hunt "Cobalt Strike" "Sliver" "AsyncRAT"
+python3 cli.py hunt "Cobalt Strike" "Sliver" "AsyncRAT"
 
 # Verbose output showing each query
-python3 c2tracker/cli.py hunt -v
+python3 cli.py hunt -v
 
 # Custom output directory
-python3 c2tracker/cli.py hunt -o /tmp/c2data
+python3 cli.py hunt -o /tmp/c2data
 ```
+
+### Scan files for malware
+
+```bash
+# Scan a single file
+python3 cli.py scan-file suspicious.exe
+
+# Scan multiple files with verbose output
+python3 cli.py scan-file -v sample1.exe sample2.dll sample3.ps1
+
+# Scan all files in a directory
+python3 cli.py scan-file /path/to/samples/*
+```
+
+The file scanner detects:
+- Known malware signatures (Cobalt Strike, Metasploit, AsyncRAT, njRAT, Remcos, etc.)
+- Suspicious behaviors (encoded PowerShell, credential dumping, persistence mechanisms)
+- Embedded IOCs (IPs, domains, URLs)
+- PE file information (architecture, sections, timestamps)
+- File entropy (packing/encryption detection)
+- Risk scoring with MALICIOUS/SUSPICIOUS/LOW RISK/CLEAN labels
 
 ### Check IPs against the threat database
 

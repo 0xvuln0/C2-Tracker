@@ -431,6 +431,127 @@ def cmd_hunt(args: argparse.Namespace) -> None:
     console.print(f"\n[bold green]{total_ips} unique IP(s) written to {output_dir}/[/bold green]")
 
 
+def cmd_scan_file(args: argparse.Namespace) -> None:
+    """Scan files for malware signatures and suspicious behavior."""
+    print_banner()
+    from file_scanner import scan_file
+
+    files = args.files
+    if not files:
+        console.print("[red]No files specified.[/red]")
+        return
+
+    all_results = []
+    for file_path in files:
+        if not os.path.exists(file_path):
+            console.print(f"[red]File not found: {file_path}[/red]")
+            continue
+
+        console.print(f"\n[bold]Scanning: {file_path}[/bold]")
+        with console.status("[cyan]Analyzing file...[/cyan]"):
+            result = scan_file(file_path)
+        all_results.append(result)
+        _print_file_scan_result(result, verbose=args.verbose)
+
+    if len(all_results) > 1:
+        malicious = sum(1 for r in all_results if r.risk_label in ("MALICIOUS", "SUSPICIOUS"))
+        console.print(f"\n[bold]Scan complete: {len(all_results)} file(s) scanned, "
+                       f"{malicious} suspicious/malicious[/bold]")
+
+
+def _print_file_scan_result(result, verbose: bool = False) -> None:
+    """Display a single FileScanResult."""
+    label_colors = {
+        "MALICIOUS": "bold red",
+        "SUSPICIOUS": "yellow",
+        "LOW RISK": "dim yellow",
+        "CLEAN": "green",
+    }
+    label_style = label_colors.get(result.risk_label, "white")
+
+    lines = []
+    lines.append(f"[bold]File:[/bold] {result.path}")
+    lines.append(f"[bold]Type:[/bold] {result.file_type}")
+    lines.append(f"[bold]Size:[/bold] {result.file_size:,} bytes")
+    lines.append(f"[bold]Entropy:[/bold] {result.entropy}")
+    lines.append(f"[bold]MD5:[/bold] {result.md5}")
+    lines.append(f"[bold]SHA256:[/bold] {result.sha256}")
+    lines.append(
+        f"[bold]Risk:[/bold] [{label_style}]{result.risk_label} "
+        f"(score: {result.risk_score}/100)[/{label_style}]"
+    )
+
+    if result.pe_info:
+        pe = result.pe_info
+        pe_parts = []
+        if "format" in pe:
+            pe_parts.append(pe["format"])
+        if "machine" in pe:
+            pe_parts.append(pe["machine"])
+        if "sections" in pe:
+            pe_parts.append(f"{pe['sections']} sections")
+        if pe_parts:
+            lines.append(f"[bold]PE Info:[/bold] {', '.join(pe_parts)}")
+        if "timestamp" in pe:
+            lines.append(f"[bold]PE Timestamp:[/bold] {pe['timestamp']}")
+
+    if result.indicators:
+        lines.append("")
+        lines.append("[bold]Indicators:[/bold]")
+        for ind in result.indicators:
+            lines.append(f"  \u2022 {ind}")
+
+    if result.detected_families:
+        lines.append("")
+        lines.append("[bold red]Detected Malware Families:[/bold red]")
+        for fam in result.detected_families:
+            lines.append(f"  \u2022 [red]{fam}[/red]")
+
+    if result.suspicious_strings:
+        lines.append("")
+        lines.append("[bold yellow]Suspicious Behaviors:[/bold yellow]")
+        for s in result.suspicious_strings:
+            lines.append(f"  \u2022 [yellow]{s}[/yellow]")
+
+    if verbose:
+        if result.embedded_ips:
+            lines.append("")
+            lines.append("[bold]Embedded IPs:[/bold]")
+            for ip in result.embedded_ips[:20]:
+                lines.append(f"  \u2022 {ip}")
+            if len(result.embedded_ips) > 20:
+                lines.append(f"  ... and {len(result.embedded_ips) - 20} more")
+
+        if result.embedded_domains:
+            lines.append("")
+            lines.append("[bold]Embedded Domains:[/bold]")
+            for domain in result.embedded_domains[:20]:
+                lines.append(f"  \u2022 {domain}")
+            if len(result.embedded_domains) > 20:
+                lines.append(f"  ... and {len(result.embedded_domains) - 20} more")
+
+        if result.detected_signatures:
+            lines.append("")
+            lines.append("[bold]Signature Matches:[/bold]")
+            for sig in result.detected_signatures:
+                lines.append(f"  \u2022 {sig}")
+
+    if result.errors:
+        lines.append("")
+        for err in result.errors:
+            lines.append(f"[dim]Error: {err}[/dim]")
+
+    content = "\n".join(lines)
+    if result.risk_label == "MALICIOUS":
+        border = "red"
+    elif result.risk_label == "SUSPICIOUS":
+        border = "yellow"
+    else:
+        border = "green"
+
+    console.print(Panel(content, title=f"File Scan: {os.path.basename(result.path)}", border_style=border))
+
+
 def main() -> None:
     """CLI entry point for c2tracker."""
     parser = argparse.ArgumentParser(
@@ -474,6 +595,10 @@ def main() -> None:
     hunt_parser.add_argument("-o", "--output", default="data", help="Output directory for IP lists")
     hunt_parser.add_argument("-v", "--verbose", action="store_true", help="Show each query as it runs")
 
+    scanfile_parser = subparsers.add_parser("scan-file", help="Scan files for malware signatures")
+    scanfile_parser.add_argument("files", nargs="+", help="File paths to scan")
+    scanfile_parser.add_argument("-v", "--verbose", action="store_true", help="Show embedded IPs, domains, and signatures")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -489,6 +614,8 @@ def main() -> None:
         cmd_list_db(args)
     elif args.command == "hunt":
         cmd_hunt(args)
+    elif args.command == "scan-file":
+        cmd_scan_file(args)
     else:
         parser.print_help()
 
