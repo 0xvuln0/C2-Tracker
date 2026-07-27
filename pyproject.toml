@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "c2tracker"
-version = "0.1.0"
+version = "0.1.1"
 description = "C2 server tracker - monitors network connections and identifies Command & Control infrastructure via Shodan and Censys"
 requires-python = ">=3.9"
 dependencies = [

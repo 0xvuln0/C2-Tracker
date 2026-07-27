@@ -23,7 +23,11 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from __init__ import __version__
+try:
+    from importlib.metadata import version as _get_version
+    __version__ = _get_version("c2tracker")
+except Exception:
+    __version__ = "0.1.0"
 
 console = Console()
 
