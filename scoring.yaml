@@ -1,0 +1,52 @@
+# c2tracker scoring configuration
+# Edit these weights to customize how risk scores are calculated.
+# Max score is 100. The scoring is split into three categories:
+#   - behaviors: raw suspicious patterns found in the file
+#   - families: named malware family matches
+#   - context: specific high-confidence indicators
+
+scoring:
+  # Behavioral indicator tiers (cumulative — reaching a tier includes all lower tiers)
+  behavior_tiers:
+    15: 40    # 15+ behaviors → 40 pts
+    10: 30    # 10-14 behaviors → 30 pts
+     7: 22    # 7-9 behaviors → 22 pts
+     4: 15    # 4-6 behaviors → 15 pts
+     2: 8     # 2-3 behaviors → 8 pts
+     1: 4     # 1 behavior → 4 pts
+
+  # Per-indicator bonuses (capped)
+  shellcode_per_hit: 2       # Each shellcode indicator
+  shellcode_max: 15           # Cap for shellcode bonuses
+  anti_analysis_per_hit: 3    # Each anti-analysis indicator
+  anti_analysis_max: 15       # Cap for anti-analysis bonuses
+  entropy_high: 4             # Entropy > 7.0
+  entropy_very_high: 4        # Entropy > 7.5
+  embedded_ip_per: 1          # Each embedded IP (max 4)
+  embedded_ip_max: 4
+
+  # Family/signature matching
+  family_log_scale: 15        # 15 * log2(1 + count), capped
+  family_max: 20
+  signature_log_scale: 5      # 5 * log2(1 + count), capped
+  signature_max: 10
+  high_conf_family_scale: 8   # Binary family matches (confidence >= 80)
+  high_conf_family_max: 10
+
+  # Contextual bonuses
+  mimikatz: 12
+  meterpreter: 8
+  reverse_shell: 6
+  memory_ops: 6
+  persistence: 5
+  defense_evasion: 6
+  webshell: 8
+  elf_indicators_per_hit: 2   # ELF-specific indicators (max 8)
+  elf_indicators_max: 8
+  small_elf_shellcode: 8      # ELF < 500 bytes with shellcode
+
+# Risk label thresholds
+thresholds:
+  malicious: 70
+  suspicious: 40
+  low_risk: 20

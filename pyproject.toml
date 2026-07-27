@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "c2tracker"
-version = "0.1.2"
+version = "0.2.0"
 description = "C2 server tracker - monitors network connections and identifies Command & Control infrastructure via Shodan and Censys"
 requires-python = ">=3.9"
 classifiers = [
@@ -33,7 +33,8 @@ dependencies = [
 
 [project.optional-dependencies]
 yara = ["yara-python>=4.3.0"]
-all = ["yara-python>=4.3.0"]
+config = ["pyyaml>=6.0"]
+all = ["yara-python>=4.3.0", "pyyaml>=6.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -50,10 +51,11 @@ py-modules = [
     "cli", "analyzer", "config", "censys_lookup", "export",
     "file_scanner", "hunter", "malware_db", "mitre_attack",
     "models", "network", "shodan_lookup", "yara_scanner",
+    "db_updater", "api_cache",
 ]
 
 [tool.setuptools.package-data]
-"*" = ["*.yar"]
+"*" = ["*.yar", "*.yaml"]
 
 [tool.setuptools.packages.find]
 include = ["c2tracker*"]

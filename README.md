@@ -19,9 +19,9 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 | Feature | Description |
 |---------|-------------|
 | **Live network monitoring** | Track all inbound/outbound connections via `psutil` |
-| **Shodan enrichment** | Banners, open ports, vulnerabilities, OS, org info |
-| **Censys enrichment** | Services, protocols, autonomous system data |
-| **Malware IP database** | 1200+ IPs across 114 families and 22 threat actors |
+| **Shodan enrichment** | Banners, open ports, vulnerabilities, OS, org info (cached) |
+| **Censys enrichment** | Services, protocols, autonomous system data (cached) |
+| **Malware IP database** | 950+ static IPs + auto-updating online IOCs from ThreatFox/URLhaus |
 | **File scanning** | Detect malware signatures, shellcode, reverse shells |
 | **YARA rules** | Built-in rules + custom rule support |
 | **MITRE ATT&CK** | Map detections to 30+ ATT&CK techniques |
@@ -30,7 +30,10 @@ Network-based Command & Control (C2) server tracker. Monitors live network conne
 | **C2 Hunting** | Passive Shodan queries to find C2 infrastructure |
 | **Export** | JSON, CSV, and IOC export formats |
 | **Docker** | Ready-to-use Docker support |
-| **Threat scoring** | Weighted scoring with MALICIOUS/SUSPICIOUS/LOW RISK/CLEAN labels |
+| **Threat scoring** | Configurable weighted scoring (edit `scoring.yaml`) |
+| **Auto-update** | Pull latest IOCs from ThreatFox and URLhaus |
+| **Parallel scanning** | Multi-threaded bulk file scanning (`-j`) |
+| **Directory watch** | Auto-scan new/modified files in a directory |
 
 ## Quick Start
 
@@ -140,8 +143,23 @@ python3 cli.py scan-file suspicious.exe
 # Scan multiple files with verbose output
 python3 cli.py scan-file -v sample1.exe sample2.dll
 
-# Export results to JSON
-python3 cli.py scan-file -o results.json suspicious.exe
+# Scan a directory (recursive)
+python3 cli.py scan-file ./samples/
+
+# Output as JSON (pipe to jq, etc.)
+python3 cli.py scan-file -f json suspicious.exe | jq '.[].risk_label'
+
+# Output as CSV
+python3 cli.py scan-file -f csv *.exe
+
+# Output IOCs only (hashes, IPs, domains)
+python3 cli.py scan-file -f ioc suspicious.exe
+
+# Summary table (compact overview)
+python3 cli.py scan-file -f summary ./samples/
+
+# Parallel scanning with 4 workers
+python3 cli.py scan-file -j 4 ./samples/ -f summary
 ```
 
 The file scanner detects:
@@ -165,17 +183,24 @@ python3 cli.py scan-file --yara suspicious.exe
 python3 cli.py scan-file --yara-rules /path/to/rules suspicious.exe
 ```
 
-### Export results
+### Update IOC database
 
 ```bash
-# Export to JSON
-python3 cli.py scan-file -o results.json sample.exe
+# Auto-update from ThreatFox + URLhaus (runs if >24h since last update)
+python3 cli.py update
 
-# Export to CSV
-python3 cli.py scan-file --csv results.csv sample.exe
+# Force update
+python3 cli.py update --force
+```
 
-# Export IOCs (hashes, IPs, domains)
-python3 cli.py scan-file --iocs iocs.txt sample.exe
+### Watch directory for new malware
+
+```bash
+# Watch a directory, scan new/modified files every 10 seconds
+python3 cli.py watch ./incoming/
+
+# Custom interval (5 seconds) with verbose output
+python3 cli.py watch -i 5 -v ./downloads/
 ```
 
 ### Hunt C2 infrastructure via Shodan
@@ -246,6 +271,34 @@ Every detection is mapped to MITRE ATT&CK techniques:
 | ... | 20+ more techniques |
 
 See [`mitre_attack.py`](mitre_attack.py) for the full mapping.
+
+## Configurable Scoring
+
+Edit `scoring.yaml` to customize risk score weights:
+
+```yaml
+scoring:
+  # More behaviors = higher score
+  behavior_tiers:
+    15: 40    # 15+ behaviors → 40 pts
+    10: 30    # 10-14 → 30 pts
+     7: 22    # 7-9 → 22 pts
+
+  # Per-indicator bonuses
+  shellcode_per_hit: 2
+  anti_analysis_per_hit: 3
+
+  # Family matches
+  family_log_scale: 15
+  family_max: 20
+
+thresholds:
+  malicious: 70
+  suspicious: 40
+  low_risk: 20
+```
+
+Requires `pyyaml`: `pip install c2tracker[config]`
 
 ## YARA Rules
 

@@ -437,30 +437,226 @@ def cmd_hunt(args: argparse.Namespace) -> None:
 
 def cmd_scan_file(args: argparse.Namespace) -> None:
     """Scan files for malware signatures and suspicious behavior."""
-    print_banner()
+    output_format = getattr(args, "format", None)
+    if not output_format:
+        print_banner()
     from file_scanner import scan_file
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     files = args.files
     if not files:
         console.print("[red]No files specified.[/red]")
         return
 
+    # Expand directories
+    expanded = []
+    for f in files:
+        if os.path.isdir(f):
+            for root, _, filenames in os.walk(f):
+                for fn in filenames:
+                    expanded.append(os.path.join(root, fn))
+        elif os.path.exists(f):
+            expanded.append(f)
+        else:
+            console.print(f"[red]File not found: {f}[/red]")
+    files = expanded
+
+    if not files:
+        console.print("[red]No valid files to scan.[/red]")
+        return
+
+    output_format = getattr(args, "format", None)
+    max_workers = getattr(args, "jobs", 1) or 1
+
+    # For machine-readable output, send progress to stderr
+    import sys as _sys
+    progress_console = Console(file=_sys.stderr) if output_format else console
+
+    def _scan_one(fp):
+        return scan_file(fp)
+
     all_results = []
-    for file_path in files:
-        if not os.path.exists(file_path):
-            console.print(f"[red]File not found: {file_path}[/red]")
-            continue
-
-        console.print(f"\n[bold]Scanning: {file_path}[/bold]")
-        with console.status("[cyan]Analyzing file...[/cyan]"):
+    if max_workers > 1 and len(files) > 1:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(_scan_one, fp): fp for fp in files}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    all_results.append(result)
+                except Exception as e:
+                    progress_console.print(f"[red]Error scanning {futures[future]}: {e}[/red]")
+    else:
+        for file_path in files:
+            progress_console.print(f"Scanning: {file_path}")
             result = scan_file(file_path)
-        all_results.append(result)
-        _print_file_scan_result(result, verbose=args.verbose)
+            all_results.append(result)
+            if not output_format:
+                _print_file_scan_result(result, verbose=args.verbose)
 
-    if len(all_results) > 1:
+    # Output in requested format
+    if output_format:
+        _output_results(all_results, output_format)
+    elif len(all_results) > 1:
         malicious = sum(1 for r in all_results if r.risk_label in ("MALICIOUS", "SUSPICIOUS"))
         console.print(f"\n[bold]Scan complete: {len(all_results)} file(s) scanned, "
                        f"{malicious} suspicious/malicious[/bold]")
+
+
+def _output_results(results, fmt: str) -> None:
+    """Output results in the specified format."""
+    import json as _json
+    import csv
+    import io
+
+    if fmt == "json":
+        data = []
+        for r in results:
+            data.append({
+                "path": r.path, "file_size": r.file_size, "md5": r.md5,
+                "sha256": r.sha256, "file_type": r.file_type, "entropy": r.entropy,
+                "risk_score": r.risk_score, "risk_label": r.risk_label,
+                "detected_families": r.detected_families,
+                "embedded_ips": r.embedded_ips, "embedded_domains": r.embedded_domains,
+                "suspicious_behaviors": r.suspicious_strings,
+                "indicators": r.indicators,
+            })
+        print(_json.dumps(data, indent=2))
+
+    elif fmt == "csv":
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=[
+            "path", "file_size", "md5", "sha256", "file_type", "entropy",
+            "risk_score", "risk_label", "detected_families", "suspicious_behaviors",
+        ])
+        writer.writeheader()
+        for r in results:
+            writer.writerow({
+                "path": r.path, "file_size": r.file_size, "md5": r.md5,
+                "sha256": r.sha256, "file_type": r.file_type, "entropy": r.entropy,
+                "risk_score": r.risk_score, "risk_label": r.risk_label,
+                "detected_families": "|".join(r.detected_families),
+                "suspicious_behaviors": "|".join(r.suspicious_strings),
+            })
+        print(buf.getvalue())
+
+    elif fmt == "ioc":
+        iocs = set()
+        for r in results:
+            if r.sha256:
+                iocs.add(f"sha256:{r.sha256}")
+            if r.md5:
+                iocs.add(f"md5:{r.md5}")
+            for ip in r.embedded_ips:
+                iocs.add(f"ip:{ip}")
+            for domain in r.embedded_domains:
+                iocs.add(f"domain:{domain}")
+        for ioc in sorted(iocs):
+            print(ioc)
+
+    elif fmt == "summary":
+        table = Table(title="Scan Summary", show_lines=True)
+        table.add_column("File", style="cyan", max_width=40)
+        table.add_column("Risk", justify="center")
+        table.add_column("Score", justify="right")
+        table.add_column("Families", max_width=30)
+        table.add_column("Behaviors", justify="right")
+        for r in results:
+            label_colors = {"MALICIOUS": "bold red", "SUSPICIOUS": "yellow",
+                           "LOW RISK": "dim yellow", "CLEAN": "green"}
+            risk_text = Text(r.risk_label, style=label_colors.get(r.risk_label, "white"))
+            table.add_row(
+                os.path.basename(r.path), risk_text, str(r.risk_score),
+                ", ".join(r.detected_families[:2]) or "-", str(len(r.suspicious_strings)),
+            )
+        console.print(table)
+
+
+def cmd_update(args: argparse.Namespace) -> None:
+    """Update the malware IOC database from online feeds."""
+    print_banner()
+    from db_updater import update_if_stale, _needs_update, fetch_threatfox, fetch_urlhaus, merge_iocs
+
+    force = getattr(args, "force", False)
+
+    if force or _needs_update():
+        console.print("[bold]Updating IOC database from online feeds...[/bold]")
+        with console.status("[cyan]Fetching ThreatFox IOCs...[/cyan]"):
+            tf = fetch_threatfox()
+        console.print(f"  ThreatFox: {len(tf)} IOCs fetched")
+        time.sleep(1)
+        with console.status("[cyan]Fetching URLhaus IOCs...[/cyan]"):
+            uh = fetch_urlhaus()
+        console.print(f"  URLhaus: {len(uh)} IOCs fetched")
+        from malware_db import MalwareIP
+        db_path = os.path.join(_project_root, "malware_db.py")
+        stats = merge_iocs(tf + uh, existing_db_path=db_path)
+        console.print(f"\n[bold green]Update complete![/bold green]")
+        console.print(f"  New IOCs added: {stats['new_count']}")
+        console.print(f"  Total online IOCs: {stats['total_online']}")
+        console.print(f"  Last updated: {stats['last_update']}")
+    else:
+        from db_updater import _load_cache
+        cache = _load_cache()
+        console.print(f"[yellow]Database is up to date (last update: {cache.get('last_update', 'never')})[/yellow]")
+        console.print(f"  Online IOCs cached: {len(cache.get('ips', {}))}")
+        console.print(f"  Use --force to update now")
+
+
+def cmd_watch(args: argparse.Namespace) -> None:
+    """Watch a directory and scan new/modified files automatically."""
+    print_banner()
+    from file_scanner import scan_file
+
+    watch_dir = args.directory
+    interval = args.interval
+    verbose = args.verbose
+
+    if not os.path.isdir(watch_dir):
+        console.print(f"[red]Not a directory: {watch_dir}[/red]")
+        return
+
+    console.print(f"[bold]Watching: {watch_dir}[/bold]")
+    console.print(f"  Interval: {interval}s | Press Ctrl+C to stop\n")
+
+    seen_files: dict[str, float] = {}
+    # Record initial state
+    for root, _, filenames in os.walk(watch_dir):
+        for fn in filenames:
+            fp = os.path.join(root, fn)
+            try:
+                seen_files[fp] = os.path.getmtime(fp)
+            except OSError:
+                pass
+
+    console.print(f"  Tracking {len(seen_files)} existing file(s). Waiting for changes...\n")
+
+    try:
+        while True:
+            time.sleep(interval)
+            current_files: dict[str, float] = {}
+            for root, _, filenames in os.walk(watch_dir):
+                for fn in filenames:
+                    fp = os.path.join(root, fn)
+                    try:
+                        current_files[fp] = os.path.getmtime(fp)
+                    except OSError:
+                        pass
+
+            # Find new or modified files
+            for fp, mtime in current_files.items():
+                if fp not in seen_files or mtime > seen_files[fp]:
+                    if fp.endswith(".json") or fp.endswith(".log"):
+                        continue
+                    console.print(f"\n[bold cyan]New/modified: {fp}[/bold cyan]")
+                    try:
+                        result = scan_file(fp)
+                        _print_file_scan_result(result, verbose=verbose)
+                    except Exception as e:
+                        console.print(f"  [red]Scan error: {e}[/red]")
+
+            seen_files = current_files
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Watch stopped.[/yellow]")
 
 
 def cmd_learning(args: argparse.Namespace) -> None:
@@ -640,11 +836,27 @@ def main() -> None:
     hunt_parser.add_argument("-v", "--verbose", action="store_true", help="Show each query as it runs")
 
     scanfile_parser = subparsers.add_parser("scan-file", help="Scan files for malware signatures")
-    scanfile_parser.add_argument("files", nargs="+", help="File paths to scan")
+    scanfile_parser.add_argument("files", nargs="+", help="File paths or directories to scan")
     scanfile_parser.add_argument("-v", "--verbose", action="store_true", help="Show embedded IPs, domains, and signatures")
+    scanfile_parser.add_argument(
+        "-f", "--format", choices=["json", "csv", "ioc", "summary"],
+        help="Output format (default: rich table)",
+    )
+    scanfile_parser.add_argument(
+        "-j", "--jobs", type=int, default=1,
+        help="Number of parallel scan workers (default: 1)",
+    )
 
     learn_parser = subparsers.add_parser("learning", help="Show learning database stats")
     learn_parser.add_argument("--reset", action="store_true", help="Reset learning database")
+
+    update_parser = subparsers.add_parser("update", help="Update IOC database from online feeds")
+    update_parser.add_argument("--force", action="store_true", help="Force update even if recent")
+
+    watch_parser = subparsers.add_parser("watch", help="Watch directory and scan new/modified files")
+    watch_parser.add_argument("directory", help="Directory to watch")
+    watch_parser.add_argument("-i", "--interval", type=int, default=10, help="Poll interval in seconds (default: 10)")
+    watch_parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed results")
 
     args = parser.parse_args()
 
@@ -665,6 +877,10 @@ def main() -> None:
         cmd_scan_file(args)
     elif args.command == "learning":
         cmd_learning(args)
+    elif args.command == "update":
+        cmd_update(args)
+    elif args.command == "watch":
+        cmd_watch(args)
     else:
         parser.print_help()
 
