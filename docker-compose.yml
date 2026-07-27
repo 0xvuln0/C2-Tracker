@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  c2tracker:
+    build: .
+    container_name: c2tracker
+    volumes:
+      - ./samples:/samples:ro
+      - ./output:/output
+      - ./.env:/app/.env:ro
+      - ./rules:/app/rules:ro
+      - ./.scanner_learn.json:/app/.scanner_learn.json
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - CENSYS_API_ID=${CENSYS_API_ID:-}
+      - CENSYS_API_SECRET=${CENSYS_API_SECRET:-}
+    # Default: show help
+    command: ["--help"]
+    profiles:
+      - tools
+
+  # Scan network connections (needs host network + root)
+  scan-net:
+    build: .
+    container_name: c2tracker-scan
+    network_mode: host
+    pid: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./output:/output
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - CENSYS_API_ID=${CENSYS_API_ID:-}
+      - CENSYS_API_SECRET=${CENSYS_API_SECRET:-}
+    command: ["scan", "--no-api"]
+    privileged: true
+    profiles:
+      - scan
+
+  # Scan files
+  scan-file:
+    build: .
+    container_name: c2tracker-filescan
+    volumes:
+      - ./samples:/samples:ro
+      - ./output:/output
+      - ./.env:/app/.env:ro
+      - ./rules:/app/rules:ro
+      - ./.scanner_learn.json:/app/.scanner_learn.json
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - CENSYS_API_ID=${CENSYS_API_ID:-}
+      - CENSYS_API_SECRET=${CENSYS_API_SECRET:-}
+    command: ["scan-file", "-v", "/samples/"]
+    profiles:
+      - file

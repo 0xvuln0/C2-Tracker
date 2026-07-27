@@ -1,26 +1,41 @@
 # C2 Tracker
 
-Network-based Command & Control (C2) server tracker. Monitors live network connections, enriches IPs via Shodan and Censys, and detects known C2 frameworks.
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/0xvuln0/C2-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/0xvuln0/C2-Tracker/actions)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](Dockerfile)
+[![YARA](https://img.shields.io/badge/YARA-Supported-orange)](yara_scanner.py)
+
+Network-based Command & Control (C2) server tracker. Monitors live network connections, enriches IPs via Shodan and Censys, scans files for malware, and detects known C2 frameworks.
+
+> Inspired by [montysecurity/C2-Tracker](https://github.com/montysecurity/C2-Tracker) for passive Shodan-based C2 hunting approach.
 
 ## Features
 
-- **Live network monitoring** via `psutil` — tracks all inbound/outbound connections
-- **Shodan enrichment** — banners, open ports, vulnerabilities, OS, org info
-- **Censys enrichment** — services, protocols, autonomous system data
-- **Known malicious IP database** — 1200+ IPs linked to Cobalt Strike, Metasploit, Sliver, TrickBot, Emotet, Conti, LockBit, REvil, and more
-- **C2 framework detection** — Cobalt Strike, Metasploit, Sliver, Havoc, Covenant, Mythic, Empire, PoshC2, Brute Ratel, Decaf, and more
-- **Threat scoring** — weighted scoring based on framework detection, port indicators, vulnerabilities, and banner analysis
-- **Continuous monitoring** mode with configurable intervals
-- **Private IP filtering** to focus on external connections
-- **C2 Hunting** — passive Shodan queries to find C2 infrastructure across the internet
+| Feature | Description |
+|---------|-------------|
+| **Live network monitoring** | Track all inbound/outbound connections via `psutil` |
+| **Shodan enrichment** | Banners, open ports, vulnerabilities, OS, org info |
+| **Censys enrichment** | Services, protocols, autonomous system data |
+| **Malware IP database** | 1200+ IPs across 114 families and 22 threat actors |
+| **File scanning** | Detect malware signatures, shellcode, reverse shells |
+| **YARA rules** | Built-in rules + custom rule support |
+| **MITRE ATT&CK** | Map detections to 30+ ATT&CK techniques |
+| **Binary analysis** | Detect raw shellcode, anti-debug, anti-VM, packing |
+| **Self-learning** | Scanner improves with each scan |
+| **C2 Hunting** | Passive Shodan queries to find C2 infrastructure |
+| **Export** | JSON, CSV, and IOC export formats |
+| **Docker** | Ready-to-use Docker support |
+| **Threat scoring** | Weighted scoring with MALICIOUS/SUSPICIOUS/LOW RISK/CLEAN labels |
 
 ## Quick Start
 
-### 1. Clone the repo
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/0xvuln0/C2-Tracker.git
 cd C2-Tracker
+pip install -e ".[all]"
 ```
 
 ### 2. Set up API keys (optional)
@@ -43,6 +58,19 @@ Get free API keys:
 
 > You can use the tool without API keys — it will use the built-in malware IP database and local network analysis.
 
+### Docker
+
+```bash
+# Build
+docker build -t c2tracker .
+
+# Scan files
+docker run -v ./samples:/samples c2tracker scan-file /samples/*
+
+# Scan network (needs host access)
+docker run --network host --pid host --privileged c2tracker scan --no-api
+```
+
 ## Usage
 
 ### Scan network connections
@@ -60,8 +88,55 @@ sudo python3 cli.py scan -m -i 10
 # Filter out private/internal IPs
 sudo python3 cli.py scan -f
 
-# Local-only scan (no Shodan/Censys lookups, just malware DB + network)
+# Local-only scan (no API lookups)
 sudo python3 cli.py scan --no-api
+```
+
+### Scan files for malware
+
+```bash
+# Scan a single file
+python3 cli.py scan-file suspicious.exe
+
+# Scan multiple files with verbose output
+python3 cli.py scan-file -v sample1.exe sample2.dll
+
+# Export results to JSON
+python3 cli.py scan-file -o results.json suspicious.exe
+```
+
+The file scanner detects:
+
+- **Malware families** — Cobalt Strike, Metasploit, Sliver, AsyncRAT, njRAT, Remcos, 40+ more
+- **Reverse shells** — bash, python, perl, php, ruby, netcat, socat
+- **Shellcode** — NOP sleds, XOR patterns, syscalls, encoded IPs
+- **Web shells** — PHP, ASP, ASPX, JSP
+- **Anti-analysis** — anti-debug, anti-VM, anti-sandbox, packing
+- **Suspicious behaviors** — encoded PowerShell, credential dumping, persistence
+- **MITRE ATT&CK** — maps every detection to technique IDs
+- **YARA rules** — scans against built-in and custom rules
+
+### YARA scanning
+
+```bash
+# Scan with built-in YARA rules
+python3 cli.py scan-file --yara suspicious.exe
+
+# Scan with custom rules directory
+python3 cli.py scan-file --yara-rules /path/to/rules suspicious.exe
+```
+
+### Export results
+
+```bash
+# Export to JSON
+python3 cli.py scan-file -o results.json sample.exe
+
+# Export to CSV
+python3 cli.py scan-file --csv results.csv sample.exe
+
+# Export IOCs (hashes, IPs, domains)
+python3 cli.py scan-file --iocs iocs.txt sample.exe
 ```
 
 ### Hunt C2 infrastructure via Shodan
@@ -73,37 +148,12 @@ python3 cli.py hunt
 # Hunt specific products only
 python3 cli.py hunt "Cobalt Strike" "Sliver" "AsyncRAT"
 
-# Verbose output showing each query
+# Verbose output
 python3 cli.py hunt -v
 
 # Custom output directory
 python3 cli.py hunt -o /tmp/c2data
 ```
-
-### Scan files for malware
-
-```bash
-# Scan a single file
-python3 cli.py scan-file suspicious.exe
-
-# Scan multiple files with verbose output
-python3 cli.py scan-file -v sample1.exe sample2.dll sample3.ps1
-
-# Scan all files in a directory
-python3 cli.py scan-file /path/to/samples/*
-```
-
-The file scanner detects:
-- Known malware signatures (Cobalt Strike, Metasploit, AsyncRAT, njRAT, Remcos, etc.)
-- Suspicious behaviors (encoded PowerShell, credential dumping, persistence mechanisms)
-- Embedded IOCs (IPs, domains, URLs)
-- PE file information (architecture, sections, timestamps)
-- File entropy (packing/encryption detection)
-- Risk scoring with MALICIOUS/SUSPICIOUS/LOW RISK/CLEAN labels
-- **Malware family identification** with reasons for detection
-- **Binary shellcode analysis** (syscalls, XOR patterns, NOP sleds)
-- **ELF anomaly detection** (tiny binaries, no section headers)
-- **Self-learning** - improves detection with each scan
 
 ### Learning database
 
@@ -120,7 +170,7 @@ python3 cli.py learning --reset
 ```bash
 # Check one or more IPs
 python3 cli.py check 45.77.65.114
-python3 cli.py check 45.77.65.114 185.56.83.83 192.168.1.1
+python3 cli.py check 45.77.65.114 185.56.83.83
 ```
 
 ### Search the threat database
@@ -138,6 +188,59 @@ python3 cli.py actor "Conti Group"
 python3 cli.py db --families --actors
 ```
 
+## MITRE ATT&CK Mapping
+
+Every detection is mapped to MITRE ATT&CK techniques:
+
+| Technique | Description |
+|-----------|-------------|
+| T1059 | Command and Scripting Interpreter |
+| T1055 | Process Injection |
+| T1053 | Scheduled Task/Job |
+| T1003 | OS Credential Dumping |
+| T1486 | Data Encrypted for Impact (Ransomware) |
+| T1027 | Obfuscated Files or Information |
+| T1572 | Protocol Tunneling |
+| T1497 | Virtualization/Sandbox Evasion |
+| T1562 | Impair Defenses |
+| T1071 | Application Layer Protocol (C2) |
+| ... | 20+ more techniques |
+
+See [`mitre_attack.py`](mitre_attack.py) for the full mapping.
+
+## YARA Rules
+
+Built-in rules in `rules/`:
+
+| File | Description |
+|------|-------------|
+| `malware.yar` | Ransomware, packed executables, cryptominers |
+| `webshells.yar` | PHP, ASPX, JSP web shells |
+| `shells.yar` | Bash, Python, Perl, Ruby reverse shells |
+
+Add your own `.yar` files to `rules/` and they'll be loaded automatically.
+
+## Architecture
+
+```
+c2tracker/
+  cli.py              # CLI entry point
+  network.py          # Network connection monitoring
+  analyzer.py         # Threat scoring engine
+  malware_db.py       # 1226 malicious IPs
+  shodan_lookup.py    # Shodan API integration
+  censys_lookup.py    # Censys API integration
+  hunter.py           # Passive C2 hunting via Shodan
+  file_scanner.py     # File-based malware analysis
+  yara_scanner.py     # YARA rule scanning
+  mitre_attack.py     # MITRE ATT&CK mapping
+  export.py           # JSON/CSV/IOC export
+  config.py           # Configuration management
+  models.py           # Data models
+  rules/              # YARA rules directory
+  test_samples/       # Sample malware for testing
+```
+
 ## C2 Frameworks Detected
 
 | Framework | Indicators |
@@ -145,13 +248,12 @@ python3 cli.py db --families --actors
 | Cobalt Strike | Beacon artifacts, malleable C2 profiles, port 50050 |
 | Metasploit | Meterpreter payloads, reverse_tcp/shells |
 | Sliver | Sliver-specific ports and service names |
-| Covenant | Grunt implants |
-| Brute Ratel | Badger payloads |
 | Havoc | Demon implants |
+| Brute Ratel | Badger payloads |
 | Mythic | Athena/apfell agents |
+| Covenant | Grunt implants |
 | Empire | PowerShell Empire artifacts |
 | PoshC2 | PoshC2-specific markers |
-| Decaf | Decaf C2 markers |
 | AsyncRAT | AsyncRAT-specific C2 channels |
 | njRAT | njRAT C2 ports |
 | Remcos | Remcos C2 infrastructure |
@@ -172,7 +274,12 @@ python3 cli.py db --families --actors
 - Root/sudo access (for live network monitoring via `scan`)
 - (Optional) Shodan API key — free tier available (required for `hunt`)
 - (Optional) Censys API key — free tier available
+- (Optional) `yara-python` for YARA rule scanning
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a PR.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
