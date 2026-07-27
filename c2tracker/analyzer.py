@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from c2tracker.censys_lookup import CensysResult
 from c2tracker.malware_db import MalwareIP, check_ip
 from c2tracker.network import Connection
-from c2tracker.shodan_lookup import ShodanResult
+from c2tracker.models import CensysResult, ShodanResult
 
 # Scoring weights — each detection source contributes a weighted amount
 SCORE_FRAMEWORK_DETECTED = 30

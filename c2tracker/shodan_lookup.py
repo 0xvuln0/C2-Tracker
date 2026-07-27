@@ -1,70 +1,12 @@
+"""Shodan API enrichment for IP lookups."""
+
 from __future__ import annotations
 
 import ipaddress
-from dataclasses import dataclass, field
 
 import shodan
 
-
-@dataclass
-class ShodanResult:
-    """Result of a Shodan IP lookup.
-
-    Attributes:
-        ip: The queried IP address.
-        ports: Open ports discovered.
-        hostnames: DNS hostnames associated with the IP.
-        os: Detected operating system.
-        org: Organization owning the IP.
-        isp: Internet service provider.
-        country: Country name.
-        city: City name.
-        banners: Raw banner data from Shodan services.
-        vulns: Known CVE identifiers.
-        error: Error message if the lookup failed, None otherwise.
-    """
-
-    ip: str
-    ports: list[int] = field(default_factory=list)
-    hostnames: list[str] = field(default_factory=list)
-    os: str | None = None
-    org: str | None = None
-    isp: str | None = None
-    country: str | None = None
-    city: str | None = None
-    banners: list[dict] = field(default_factory=list)
-    vulns: list[str] = field(default_factory=list)
-    error: str | None = None
-
-    @property
-    def is_c2_suspect(self) -> bool:
-        """Check if banners contain known C2 framework indicators.
-
-        Returns True if any banner matches known C2 tooling signatures.
-        """
-        c2_indicators = [
-            "cobalt", "cobaltstrike", "beacon", "malleable",
-            "metasploit", "meterpreter", "covenant", "grunt",
-            "sliver", "brute ratel", "bruteratel", "badger",
-            "havoc", "demon", "decaf", "mythic", "apfell",
-            "empire", "powershell-empire", "poshc2",
-        ]
-        banner_text = " ".join(str(b) for b in self.banners).lower()
-        return any(ind in banner_text for ind in c2_indicators)
-
-    def __str__(self) -> str:
-        parts = [f"IP: {self.ip}"]
-        if self.os:
-            parts.append(f"OS: {self.os}")
-        if self.org:
-            parts.append(f"Org: {self.org}")
-        if self.country:
-            parts.append(f"Country: {self.country}")
-        if self.ports:
-            parts.append(f"Ports: {', '.join(str(p) for p in self.ports)}")
-        if self.vulns:
-            parts.append(f"Vulns: {len(self.vulns)}")
-        return " | ".join(parts)
+from c2tracker.models import ShodanResult
 
 
 def lookup_ip(api_key: str, ip: str) -> ShodanResult:
